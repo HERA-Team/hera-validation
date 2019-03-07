@@ -1,2 +1,4 @@
 
 *.md~
+
+\.ipynb_checkpoints/

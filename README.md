@@ -56,6 +56,22 @@ in which the progress can be tracked and defined. Each project should receive
 a title which contains the **step**.**variation** identifier as well as a brief
 description.
 
+### Writing a validation test notebook
+
+We have provided a template notebook which should serve as a starting
+place for creating a validation notebook. The template is self-describing,
+and has no intrinsic dependencies. All text in the notebook surrounded
+by curly braces are meant to be replaced.
+
+The template can be slightly improved/cleaned if you use jupyter notebook
+extensions -- in particular the ToC and python-markdown extensions. The
+first allows a cleaner way to build a table of contents (though one is
+already included), and the latter allows using python variables in
+markdown cells. This makes the writing of git hashes and versions simpler,
+and means for example that the execution time/date can be written directly
+into a markdown cell. 
+
+
 ## Large-scale Validation Steps
 
 0. P(k) white, on sky -> vis - P_meas(k)
