@@ -15,4 +15,12 @@
 * [] All HERA software has full git commit hash referenced
 * [] All data used is explicitly referenced
 
+### Steps Forward
+
+A suggested list of condensed automatic tests arising from this PR, and relevant repos to include them in:
+* 
+
+A suggested list of follow-up validation tests which may not already appear on the validation path:
+*
+
 <!-- Please suggest at least two reviewers who are not on the list of contributors.-->
