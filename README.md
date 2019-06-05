@@ -90,7 +90,7 @@ What is **happening** here?
 - Add RFI flags pre-smoothcal
 - Add RFI flags to FG, EoR, gains variation, and cross-talk
 - Add actual realistic-level RFI
-
+- LST binning and "fringe rate filtering" (time averaging)
 
 **Variations to consider, outside the scope of IDR2**
 - non-ideal antenna positions
