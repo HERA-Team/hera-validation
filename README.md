@@ -92,9 +92,8 @@ What is **happening** here?
 - Add actual realistic-level RFI
 
 
-**Additional Variations**
-- P(k) non-white
-- FG not matching abscal
+**Variations to consider, outside the scope of IDR2**
+- non-ideal antenna positions
 - antenna-to-antenna beam variation
 - beam real != beam model
 - polarized sky
