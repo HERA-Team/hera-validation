@@ -74,7 +74,7 @@ into a markdown cell.
 
 ## Large-scale Validation Steps
 
-0. P(k) white, on sky -> vis - P_meas(k)
+0. Tests of hera_pspec's ability to reproduce known power spectra from EoR-only simulations which are sky-locked and noise.  EoR sims include flat P(k), various shapes, and 21cmfast sims.  Noise models are both white with frequency and time, and following a fiducial sky model.  
 1. GSM + pt src + EoR -> vis -> P_meas(k) (tests hera_pspec w / FRF?)
 2. (FG matching abscal model + EoR) x per antenna gains (tests hera_cal + hera_pspec, first end-to-end)
 3. FG + EoR + gains + cross-talk + RFI + … (end-to-end, systematic oriented)
