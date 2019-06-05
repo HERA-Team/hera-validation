@@ -74,7 +74,7 @@ into a markdown cell.
 
 ## Large-scale Validation Steps
 
-0.1 ** Validation of the visibility simulators against pyuvsim reference simulations.**
+Step -1. ** Validation of the visibility simulators against pyuvsim reference simulations.**
 0. *Tests of hera_pspec's ability to reproduce known power spectra from EoR-only simulations of visibilities (which are sky-locked) and noise visibilities.*  EoR sims include flat P(k), various shapes, and 21cmfast sims.  Noise models are both white with frequency and time, and following a fiducial sky model.  Noise is taken from hera_sim and added in visibilities to the various simulators.  This should (eventually) be able to deal with different amounts of coherent and incoherent averaging.
 1. *Tests of hera_pspec's ability to recover EoR-only power spectra from visibility simulations including unpolarized foregrounds and noise, and visibility simulators to produce the same foreground power spectra.*  The foregrounds include diffuse (GSM), point sources (GLEAM, etc), and different EoR and noise models.  This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  Cross-check that different visibility simulators produce the same power spectra for the same foregrounds (in "map" domain).
 2. (FG matching abscal model + EoR) x per antenna gains (tests hera_cal + hera_pspec, first end-to-end)
