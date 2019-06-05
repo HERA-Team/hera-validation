@@ -75,15 +75,21 @@ What is **happening** here?
 
 ## Large-scale Validation Steps
 
-**Step -1: Validation of the visibility simulators against pyuvsim reference simulations.**
+**Step -1: Validation of the visibility simulators against pyuvsim reference simulations.**  https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations with https://github.com/RadioAstronomySoftwareGroup/pyuvsim/pull/211 as template.
 
 **Step 0: Tests of `hera_pspec`'s ability to reproduce known power spectra from EoR-only simulations of visibilities (which are sky-locked) and noise visibilities.**  EoR sims include flat P(k), various shapes, and 21cmfast sims.  Noise models are both white with frequency and time, and following a fiducial sky model.  Noise is taken from hera_sim and added in visibilities to the various simulators.  This should (eventually) be able to deal with different amounts of coherent and incoherent averaging.
 
 **Step 1: Tests of `hera_pspec`'s ability to recover EoR-only power spectra from visibility simulations including unpolarized foregrounds and noise, and visibility simulators to produce the same foreground power spectra.**  The foregrounds include diffuse (GSM), point sources (GLEAM, etc), and different EoR and noise models.  This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  Cross-check that different visibility simulators produce the same power spectra for the same foregrounds (in "map" domain).
 
-**Step 2: Tests of `hera_cal`'s effect on the final power spectrum, accummulated stepwise.** (FG matching abscal model + EoR) x per antenna gains (tests hera_cal + hera_pspec, first end-to-end)
+**Step 2: Tests of `hera_cal`'s effect on the final power spectrum, accummulated piecewise from bits of the analysis flowchart.**  The underlying assumptions of the calibration (ideal antenna positions, identical beams, smooth antenna-based gains) are respected.  At this step, this is the first attempt to go from visibilities through "all" of the analysis and power spectrum steps to verify that in the input EoR $P(k)$ is recovered.
+- redcal + abscal check that gains are recovered 
+- EoR added, then redcal + abscal + smoothcal to $P(k)$    
+- validate reference model construction by realistic foreground, then apply
 
-**Step 3: ** FG + EoR + gains + cross-talk + RFI + … (end-to-end, systematic oriented)
+**Step 3: Tests of the full end-to-end pipeline at modest realism.** 
+- Add RFI flags pre-smoothcal
+- Add RFI flags to FG, EoR, gains variation, and cross-talk
+- Add actual realistic-level RFI
 
 
 **Additional Variations**
