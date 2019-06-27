@@ -71,8 +71,6 @@ markdown cells. This makes the writing of git hashes and versions simpler,
 and means for example that the execution time/date can be written directly
 into a markdown cell. 
 
-What is **happening** here?
-
 ## Large-scale Validation Steps
 
 **Step -1: Validation of the visibility simulators against pyuvsim reference simulations.**  https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations with https://github.com/RadioAstronomySoftwareGroup/pyuvsim/pull/211 as template.
