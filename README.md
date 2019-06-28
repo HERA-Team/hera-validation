@@ -76,14 +76,10 @@ Here follows a formal plan for envisaged tests. This list is *not final*: it may
 
 What the symbols mean:
 
-Symbol | What it Means
--------| -------------
-:egg:      | Idea in gestation 
-:hammer:   | Currently being worked on
-:thinking: | PR submitted...
-:heavy_check_mark: | Passed
-:x:        | Failed
-:watch:    | Outside current scope
+Sym. | Meaning | Sym. | Meaning | Sym.  |Meaning
+-------| ----- | ----- | ---- | ----- | ------
+:egg:      | Idea in gestation  | :hammer:   | Currently being worked on | :thinking: | PR submitted... 
+:heavy_check_mark: | Passed     | :x:        | Failed | :watch:    | Outside current scope
 
 ### Step -1: Compare visibility simulators with `pyuvsim`.  
 Use formal `pyuvsim` [reference simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations)
