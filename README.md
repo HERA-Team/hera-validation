@@ -71,27 +71,64 @@ markdown cells. This makes the writing of git hashes and versions simpler,
 and means for example that the execution time/date can be written directly
 into a markdown cell. 
 
-## Large-scale Validation Steps
+## Project Plan
+Here follows a formal plan for envisaged tests. This list is *not final*: it may be extended or modified at any time. However, it provides a reasonable snapshot of the current status and plans of the validation team.
 
-**Step -1: Validation of the visibility simulators against pyuvsim reference simulations.**  https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations with https://github.com/RadioAstronomySoftwareGroup/pyuvsim/pull/211 as template.
+What the markers mean:
 
-**Step 0: Tests of `hera_pspec`'s ability to reproduce known power spectra from EoR-only simulations of visibilities (which are sky-locked) and noise visibilities.**  EoR sims include flat P(k), various shapes, and 21cmfast sims.  Noise models are both white with frequency and time, and following a fiducial sky model.  Noise is taken from hera_sim and added in visibilities to the various simulators.  This should (eventually) be able to deal with different amounts of coherent and incoherent averaging.
+| ---- | ------|
+| :egg: | Idea in gestation | 
+| :hammer: | Currently being worked on |
+| :thinking: | PR submitted... |
+| :heavy_check_mark: | Passed |
+| :x: | Failed |
+| :watch: | Outside current scope |
 
-**Step 1: Tests of `hera_pspec`'s ability to recover EoR-only power spectra from visibility simulations including unpolarized foregrounds and noise, and visibility simulators to produce the same foreground power spectra.**  The foregrounds include diffuse (GSM), point sources (GLEAM, etc), and different EoR and noise models.  This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  Cross-check that different visibility simulators produce the same power spectra for the same foregrounds (in "map" domain).
+### Step -1: Compare visibility simulators with `pyuvsim`.  
 
-**Step 2: Tests of `hera_cal`'s effect on the final power spectrum, accummulated piecewise from bits of the analysis flowchart.**  The underlying assumptions of the calibration (ideal antenna positions, identical beams, smooth antenna-based gains) are respected.  At this step, this is the first attempt to go from visibilities through "all" of the analysis and power spectrum steps to verify that in the input EoR $P(k)$ is recovered.
-- redcal + abscal check that gains are recovered 
-- EoR added, then redcal + abscal + smoothcal to $P(k)$    
-- validate reference model construction by realistic foreground, then apply
+* **Description**: Use formal `pyuvsim` [reference simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations)
+  as strict comparison points with every visibility simulator used in any other step, using [this template]( https://github.com/RadioAstronomySoftwareGroup/pyuvsim/pull/211).
+* **Variations**
+  * :hammer: -1.0: `healvis`
+  * :hammer: -1.1: `RIMEz`
+  * :egg: -1.2: `vis_cpu`
+  
+### Step 0: Test `hera_pspec` directly, without foregrounds.
+* **Description**: Test `hera_pspec`'s ability to reproduce known power spectra from EoR-only simulations of visibilities (which are sky-locked) and noise visibilities. Noise models are both white with frequency and time, and following a fiducial sky model.  Noise is taken from hera_sim and added in visibilities to the various simulators.  This should (eventually) be able to deal with different amounts of coherent and incoherent averaging.
+* **Variations**
+  * :thinking: 0.0: White noise only.
+  * :thinking: 0.1.: Flat P(k), no noise. 
+  * :hammer: 0.2: Power-law P(k), no noise.
+  * :egg: 0.3: Sharp-feature P(k), no noise.
+  * :egg: 0.4: P(k) from 21cmFAST, no noise.
 
-**Step 3: Tests of the full end-to-end pipeline at modest realism.** 
-- Add RFI flags pre-smoothcal
-- Add RFI flags to FG, EoR, gains variation, and cross-talk
-- Add actual realistic-level RFI
-- LST binning and "fringe rate filtering" (time averaging)
+### Step 1: Test `hera_pspec` directly, with foregrounds.
+* **Description**: Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations including unpolarized foregrounds and noise. This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  
+* **Variations**
+  * :thinking: 1.0: Power-law P(k) + Diffuse (GSM), no noise.
+  * :hammer: 1.1: Power-law P(k) + 100 random point sources, no noise.
+  * :egg: 1.2: Flat P(k) + GSM + point sources + noise.
 
-**Variations to consider, outside the scope of IDR2**
-- non-ideal antenna positions
-- antenna-to-antenna beam variation
-- beam real != beam model
-- polarized sky
+### Step 2: Test `hera_cal`'s effect on recovered P(k)
+* **Description**: Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated piecewise from bits of the analysis flowchart. The underlying assumptions of the calibration (ideal antenna positions, identical beams, smooth antenna-based gains) are respected.  At this step, this is the first attempt to go from visibilities through "all" of the analysis and power spectrum steps to verify that in the input EoR $P(k)$ is recovered.
+* **Variations**
+  * :thinking: 2.0: Known gains (from point-sources) --> `redcal`+`abscal`.
+  * :egg: 2.1: Known gains (from point-source + flat P(k) EoR) --> `redcal`+`abscal`+`smoothcal` --> `hera_pspec`.
+  * :egg: 2.2: Validation of reference model construction.
+
+### Step 3: Test effects of RFI (and `xRFI`)
+* **Description**: Test the effects of both realistic RFI, and data-driven *flags* on various parts of the pipeline.
+* **Variations**:
+  * :hammer: 3.0: Freq-dependent noise (according to flagged channels) directly to `pspec`.
+  * :egg: 3.1: Apply *data* RFI flags to FG + EoR sim, run `smoothcal` and `pspec`. 
+  * :egg: 3.2: Apply *data* RFI flags to FG + EoR + Gains + Cross-Talk
+  
+### Step 4: Test full end-to-end pipeline at modest realism
+* **Description**: Test most or all components of the full pipeline (including `redcal`, `abscal`, `xRFI`, `smoothcal`, `hera_pspec`).
+* **Variations**:
+  * :hammer: 4.0: EoR + FG + RFI (not flags) --> `abscal`, `redcal`, `xRFI`, `smoothcal`, `pspec`.
+  * :egg: 4.1: Test LST-binning and "fringe rate filtering" (time averaging).
+  * :watch: 4.2: non-ideal antenna positions
+  * :watch: 4.3: antenna-to-antenna beam variation
+  * :watch: 4.4: beam real != beam model
+  * :watch: 4.5: polarized sky
