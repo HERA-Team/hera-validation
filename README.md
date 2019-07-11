@@ -112,7 +112,7 @@ Status     | #   | Description
 :egg:      | 1.2 | Flat P(k) + GSM + point sources + noise.
 
 ### Step 2: Test `hera_cal`'s effect on recovered P(k)
-Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated piecewise from bits of the analysis flowchart. The underlying assumptions of the calibration (ideal antenna positions, identical beams, smooth antenna-based gains) are respected.  At this step, this is the first attempt to go from visibilities through "all" of the analysis and power spectrum steps to verify that in the input EoR $P(k)$ is recovered.
+Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated piecewise from bits of the analysis flowchart. The underlying assumptions of the calibration (ideal antenna positions, identical beams, smooth antenna-based gains) are respected.  
 
 Status     | #   | Description
 -----------| ----|------------
