@@ -87,37 +87,37 @@ Use formal `pyuvsim` [reference simulations](https://github.com/RadioAstronomySo
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | -1.0| `healvis`   | `healvis`    | `GSM` (?)       | None                | @alanman |
-:hammer:   | -1.1| `RIMEz`     | `RIMEz`      | `GSM` (?)       | None                | @zacharymartinot | 
-:egg:      | -1.2| `vis_cpu`   | `vis_cpu`    | GLEAM           | None                | @steven-murray |
+:hammer:   | -1.0| `healvis`   | `healvis`    | `GSM` (?)       | None                | [@alanman][al] |
+:hammer:   | -1.1| `RIMEz`     | `RIMEz`      | `GSM` (?)       | None                | [@zacharymartinot][zm] | 
+:egg:      | -1.2| `vis_cpu`   | `vis_cpu`    | GLEAM           | None                | [@steven-murray][sgm] |
   
 ### Step 0: Test `hera_pspec` directly, without foregrounds.
 Test `hera_pspec`'s ability to reproduce known power spectra from EoR-only simulations of visibilities (which are sky-locked) and noise visibilities. Noise models are both white with frequency and time, and following a fiducial sky model.  Noise is taken from hera_sim and added in visibilities to the various simulators.  This should (eventually) be able to deal with different amounts of coherent and incoherent averaging.
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | (0.0)[https://github.com/HERA-Team/hera-validation/pull/5] | White noise only. | `hera_sim` | `noise`     | `hera_pspec`        | @nkern   |
-:heavy_check_mark: | 0.1 | Flat P(k) | `healvis` | EoR | `hera_pspec` | @r-pascua |
-:hammer:   | 0.2 | Power-law P(k) | `RIMEz` | EoR | `hera_pspec` | @zacharymartinot |
-:egg:      | 0.3 | Sharp-feature P(k) | `RIMEz` | EoR | `hera_pspec` | @zacharymartinot |
-:egg:      | 0.4 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | @nithyanandan |
+:thinking: | [0.0](https://github.com/HERA-Team/hera-validation/pull/5) | White noise only. | `hera_sim` | `noise`     | `hera_pspec`        | [@nkern][nk]   |
+:heavy_check_mark: | 0.1 | Flat P(k) | `healvis` | EoR | `hera_pspec` | [@r-pascua][rp] |
+:hammer:   | 0.2 | Power-law P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
+:egg:      | 0.3 | Sharp-feature P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
+:egg:      | 0.4 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | [@nithyanandan][nt] |
 
 ### Step 1: Test `hera_pspec` directly, with foregrounds.
 Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations including unpolarized foregrounds and noise. This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | 1.0 | Power-law P(k) + Diffuse (GSM) | `RIMEz` | EoR, GSM | `hera_pspec` | @zacharymartinot |
-:egg:      | 1.1 | Power-law P(k) + point sources | `RIMEz` | EoR, GLEAM or Random Pt.Srcs. | `hera_pspec` | @zacharymartinot |
-:egg:      | 1.2 | Flat P(k) + GSM + point sources + noise | `healvis` (?), `hera_sim` | EoR, GSM, GLEAM, `noise` | `hera_pspec` | @alanman, @r-pascua |  
+:thinking: | 1.0 | Power-law P(k) + Diffuse (GSM) | `RIMEz` | EoR, GSM | `hera_pspec` | [@zacharymartinot[zm] |
+:egg:      | 1.1 | Power-law P(k) + point sources | `RIMEz` | EoR, GLEAM or Random Pt.Srcs. | `hera_pspec` | [@zacharymartinot][zm] |
+:egg:      | 1.2 | Flat P(k) + GSM + point sources + noise | `healvis` (?), `hera_sim` | EoR, GSM, GLEAM, `noise` | `hera_pspec` | [@alanman][al], [@r-pascua][rp] |  
 
 ### Step 2: Test `hera_cal`'s effect on recovered P(k)
 Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated piecewise from bits of the analysis flowchart. The underlying assumptions of the calibration (ideal antenna positions, identical beams, smooth antenna-based gains) are respected.  
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | 2.0 | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | @jsdillon, @jaguirre |
-:egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | @alanman, @jaguirre |
+:thinking: | 2.0 | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
+:egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | [@alanman][al], [@jaguirre][ja] |
 :egg:      | 2.2 | Validation of reference model construction. | * | * | * | * |
 
 ### Step 3: Test effects of RFI (and `xRFI`)
@@ -125,7 +125,7 @@ Test the effects of both realistic RFI, and data-driven *flags* on various parts
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | 3.0 | Freq-dep noise (according to flagged channels) direct to `pspec` | `healvis`, `hera_sim` | EoR, `noise` | `hera_pspec` | @zacharymartinot |
+:hammer:   | 3.0 | Freq-dep noise (according to flagged channels) direct to `pspec` | `healvis`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 3.1 | Apply *data* RFI flags  | `healvis`(?) | EoR, GSM | `smoothcal`, `pspec` | ? | 
 :egg:      | 3.2 | Apply *data* RFI flags w/systematics | `healvis`(?), `hera_sim` | EoR, GSM, `sigchain.gen_gains`, `sigchain.xtalk` | `smoothcal`, `pspec` | ? | 
   
@@ -134,9 +134,18 @@ Test most or all components of the full pipeline (including `redcal`, `abscal`, 
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | 4.0 |   | `healvis`, `hera_sim` | EoR, GSM, GLEAM, `rfi` | `abscal`, `redcal`, `xRFI`, `smoothcal`, `pspec` | @steven-murray, @r-pascua |
+:hammer:   | 4.0 |   | `healvis`, `hera_sim` | EoR, GSM, GLEAM, `rfi` | `abscal`, `redcal`, `xRFI`, `smoothcal`, `pspec` | [@steven-murray][sgm], [@r-pascua][rp] |
 :egg:      | 4.1 | Test LST-binning and "fringe rate filtering" (time averaging).
 :watch:    | 4.2 | Non-ideal antenna positions
 :watch:    | 4.3 | Antenna-to-antenna beam variation
 :watch:    | 4.4 | Beam real != beam model
 :watch:    | 4.5 | Polarized sky
+
+[rp]: https://github.com/r-pascua
+[nk]: https://github.com/nkern
+[sgm]: https://github.com/steven-murray
+[ja]: https://github.com/jaguirre
+[zm]: https://github.com/zacharymartinot
+[jsd]: https://github.com/jsdillon
+[al]: https://github.com/alanman
+[nt]: https://github.com/nithyanandan
