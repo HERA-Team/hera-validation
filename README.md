@@ -97,7 +97,7 @@ Test `hera_pspec`'s ability to reproduce known power spectra from EoR-only simul
 Status     | #   | Description
 -----------| ----|------------
 :thinking: | 0.0 | White noise only.
-:thinking: | 0.1 | Flat P(k), no noise. 
+:heavy_check_mark: | 0.1 | Flat P(k), no noise. 
 :hammer:   | 0.2 | Power-law P(k), no noise.
 :egg:      | 0.3 | Sharp-feature P(k), no noise.
 :egg:      | 0.4 | P(k) from 21cmFAST, no noise.
