@@ -108,7 +108,7 @@ Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations incl
 Status     | #   | Description
 -----------| ----|------------
 :thinking: | 1.0 | Power-law P(k) + Diffuse (GSM), no noise.
-:hammer:   | 1.1 | Power-law P(k) + 100 random point sources, no noise.
+:hammer:   | 1.1 | Power-law P(k) + point sources, no noise.
 :egg:      | 1.2 | Flat P(k) + GSM + point sources + noise.
 
 ### Step 2: Test `hera_cal`'s effect on recovered P(k)
