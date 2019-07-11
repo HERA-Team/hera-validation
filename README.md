@@ -107,7 +107,7 @@ Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations incl
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | 1.0 | Power-law P(k) + Diffuse (GSM) | `RIMEz` | EoR, GSM | `hera_pspec` | [@zacharymartinot[zm] |
+:thinking: | 1.0 | Power-law P(k) + Diffuse (GSM) | `RIMEz` | EoR, GSM | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 1.1 | Power-law P(k) + point sources | `RIMEz` | EoR, GLEAM or Random Pt.Srcs. | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 1.2 | Flat P(k) + GSM + point sources + noise | `healvis` (?), `hera_sim` | EoR, GSM, GLEAM, `noise` | `hera_pspec` | [@alanman][al], [@r-pascua][rp] |  
 
@@ -116,7 +116,7 @@ Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated pi
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | 2.0 | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
+:thinking: | [2.0](#4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
 :egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | [@alanman][al], [@jaguirre][ja] |
 :egg:      | 2.2 | Validation of reference model construction. | * | * | * | * |
 
