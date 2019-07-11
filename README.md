@@ -116,7 +116,7 @@ Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated pi
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | [2.0](#4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
+:thinking: | [2.0](https://github.com/HERA-Team/hera-validation/pull/4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
 :egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | [@alanman][al], [@jaguirre][ja] |
 :egg:      | 2.2 | Validation of reference model construction. | * | * | * | * |
 
