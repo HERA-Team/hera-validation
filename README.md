@@ -147,5 +147,5 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 [ja]: https://github.com/jaguirre
 [zm]: https://github.com/zacharymartinot
 [jsd]: https://github.com/jsdillon
-[al]: https://github.com/alanman
+[al]: https://github.com/aelanman
 [nt]: https://github.com/nithyanandan
