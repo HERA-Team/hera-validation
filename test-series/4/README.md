@@ -1,4 +1,1 @@
-# Validation Step 4
-
-Test most or all components of the full pipeline (including `redcal`, `abscal`, `xRFI`, 
-`smoothcal`, `hera_pspec`).
+# [Validation Step 4](../../README.md#step-4-test-full-end-to-end-pipeline-at-modest-realism)
