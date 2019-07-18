@@ -1,1 +1,1 @@
-# [Validation Step -1](../README.md#step--1-compare-visibility-simulators-with-pyuvsim)
+# [Validation Step -1](../../README.md#step--1-compare-visibility-simulators-with-pyuvsim)
