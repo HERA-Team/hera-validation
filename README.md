@@ -129,7 +129,8 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 :hammer:   | 3.0 | Freq-dep noise (according to flagged channels) direct to `pspec` | `healvis`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 3.1 | Apply *data* RFI flags  | `healvis`(?) | EoR, GSM | `smoothcal`, `pspec` | ? | 
 :egg:      | 3.2 | Apply *data* RFI flags w/systematics | `healvis`(?), `hera_sim` | EoR, GSM, `sigchain.gen_gains`, `sigchain.xtalk` | `smoothcal`, `pspec` | ? | 
-  
+:egg:      | 3.3 | Simulated RFI and `xRFI` | `healvis`, `hera_sim` | GSM, `rfi` | `xRFI` | [@steven-murray][sgm] |
+
 ### [Step 4](test-series/4): Test full end-to-end pipeline at modest realism
 Test most or all components of the full pipeline (including `redcal`, `abscal`, `xRFI`, `smoothcal`, `hera_pspec`).
 
