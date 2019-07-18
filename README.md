@@ -87,8 +87,8 @@ Use formal `pyuvsim` [reference simulations](https://github.com/RadioAstronomySo
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | -1.0| `healvis`   | `healvis`    | `GSM` (?)       | None                | [@alanman][al] |
-:hammer:   | -1.1| `RIMEz`     | `RIMEz`      | `GSM` (?)       | None                | [@zacharymartinot][zm] | 
+:hammer:   | -1.0| `healvis`   | `healvis`    | `GSM`-like      | None                | [@alanman][al] |
+:hammer:   | -1.1| `RIMEz`     | `RIMEz`      | GLEAM           | None                | [@zacharymartinot][zm] | 
 :hammer:   | -1.2| `PRISim`    | `PRISim`     | GLEAM           | None                | [@nithyanandan][nt]   |
 :egg:      | -1.3| `vis_cpu`   | `vis_cpu`    | GLEAM           | None                | [@steven-murray][sgm] |
   
