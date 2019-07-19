@@ -4,7 +4,7 @@ Some useful tools for writing relevant validation notebooks.
 from importlib import import_module
 
 
-def print_dep_versions(extras=None):
+def print_dep_versions(extras=None, ignore=None):
     """
     Prints versions of all important "active" modules.
 
@@ -28,10 +28,15 @@ def print_dep_versions(extras=None):
         "h5py"
     ]
 
+    ignore = ignore or []
+
     if extras is not None:
         MODULES += extras
 
     for module in MODULES:
+        if module in ignore:
+            continue
+
         try:
             _mdl = import_module(module)
         except ModuleNotFoundError:
