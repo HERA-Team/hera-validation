@@ -97,9 +97,9 @@ Test `hera_pspec`'s ability to reproduce known power spectra from EoR-only simul
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | [0.0](https://github.com/HERA-Team/hera-validation/pull/5) | Uncorrelated _k_- and time-dep noise | `hera_sim` | `noise`     | `hera_pspec`        | [@nkern][nk]   |
+:heavy_check_mark: | [0.0](https://github.com/HERA-Team/hera-validation/pull/5) | Uncorrelated _k_- and time-dep noise | `hera_sim` | `noise`     | `hera_pspec`        | [@nkern][nk]   |
 :heavy_check_mark: | 0.1 | Flat P(k) | `healvis` | EoR | `hera_pspec` | [@r-pascua][rp] |
-:hammer:   | 0.2 | Power-law P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
+:thinking:   | 0.2 | Power-law P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 0.3 | Sharp-feature P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 0.4 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | [@nithyanandan][nt] |
 
@@ -117,7 +117,7 @@ Test effect of `hera_cal` on recovered P(k) (i.e. `hera_pspec`), accummulated pi
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:thinking: | [2.0](https://github.com/HERA-Team/hera-validation/pull/4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
+:heavy_check_mark: | [2.0](https://github.com/HERA-Team/hera-validation/pull/4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
 :egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | [@alanman][al], [@jaguirre][ja] |
 :egg:      | 2.2 | Validation of reference model construction. | * | * | * | * |
 
