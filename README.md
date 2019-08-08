@@ -100,8 +100,9 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 :heavy_check_mark: | [0.0](https://github.com/HERA-Team/hera-validation/pull/5) | Uncorrelated _k_- and time-dep noise | `hera_sim` | `noise`     | `hera_pspec`        | [@nkern][nk]   |
 :heavy_check_mark: | 0.1 | Flat P(k) | `healvis` | EoR | `hera_pspec` | [@r-pascua][rp] |
 :thinking:   | 0.2 | Power-law P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
-:egg:      | 0.3 | Sharp-feature P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
-:egg:      | 0.4 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | [@nithyanandan][nt] |
+:egg:      | 0.3 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | [@nithyanandan][nt] |
+:egg:      | 0.4 | Flat P(k) + noise | `PRISim`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@nkern][nk] |
+:watch:      | 0.5 | Sharp-feature P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
 
 ### [Step 1](test-series/1/): Test `hera_pspec` directly, with foregrounds.
 Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations including unpolarized foregrounds and noise. This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  
