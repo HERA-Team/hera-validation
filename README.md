@@ -120,7 +120,7 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
 :heavy_check_mark: | [2.0](https://github.com/HERA-Team/hera-validation/pull/4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
 :egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | [@alanman][al], [@jaguirre][ja] |
-:egg:      | 2.2 | Validation of reference model construction. | RIMEz | GSM, GLEAM, noise | `casa_calibration` | @Tasha |
+:egg:      | 2.2 | Validation of reference model construction. | RIMEz | GSM, GLEAM, noise | `casa_calibration` | @TashaleeB |
 
 ### [Step 3](test-series/3/): Test effects of RFI (and `xRFI`)
 Test the effects of both realistic RFI, and data-driven *flags* on various parts of the pipeline.
