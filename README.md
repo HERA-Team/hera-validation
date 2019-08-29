@@ -98,7 +98,7 @@ Test `hera_pspec`'s ability to reproduce known power spectra from EoR-only simul
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
 :heavy_check_mark: | [0.0](https://github.com/HERA-Team/hera-validation/pull/5) | Uncorrelated _k_- and time-dep noise | `hera_sim` | `noise`     | `hera_pspec`        | [@nkern][nk]   |
-:heavy_check_mark: | 0.1 | Flat P(k) | `healvis` | EoR | `hera_pspec` | [@r-pascua][rp] |
+:heavy_check_mark: | [0.1](https://github.com/HERA-Team/hera-validation/pull/7) | Flat P(k) | `healvis` | EoR | `hera_pspec` | [@r-pascua][rp] |
 :thinking:   | 0.2 | Power-law P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] |
 :egg:      | 0.3 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | [@nithyanandan][nt] |
 :egg:      | 0.4 | Flat P(k) + noise | `PRISim`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@nkern][nk] |
@@ -120,16 +120,16 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
 :heavy_check_mark: | [2.0](https://github.com/HERA-Team/hera-validation/pull/4) | Recover known gains | `healvis` | Pt.Srcs. |  `redcal`, `abscal` | [@jsdillon][jsd], [@jaguirre][ja] |
 :egg:      | 2.1 | Recover flat P(k) with known gains | `healvis` |  EoR, Pt.Srcs. | `redcal`, `abscal`, `smoothcal`, `hera_pspec` | [@alanman][al], [@jaguirre][ja] |
-:egg:      | 2.2 | Validation of reference model construction. | * | * | * | * |
+:egg:      | 2.2 | Validation of reference model construction. | RIMEz | GSM, GLEAM, noise | `casa_calibration` | [@TashaleeB][tb] |
 
 ### [Step 3](test-series/3/): Test effects of RFI (and `xRFI`)
 Test the effects of both realistic RFI, and data-driven *flags* on various parts of the pipeline.
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | 3.0 | Freq-dep noise (according to flagged channels) direct to `pspec` | `RIMEz`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@zacharymartinot][zm] |
-:egg:      | 3.1 | Apply *data* RFI flags  | `RIMEz` | EoR, GSM | `smoothcal`, `pspec` | ? | 
-:egg:      | 3.2 | Apply *data* RFI flags w/systematics | `healvis`(?), `hera_sim` | EoR, GSM, `sigchain.gen_gains`, `sigchain.xtalk` | `smoothcal`, `pspec` | ? | 
+:hammer:   | [3.0](https://github.com/HERA-Team/hera-validation/issues/20) | Freq-dep noise (according to flagged channels) direct to `pspec` | `RIMEz`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@zacharymartinot][zm] |
+:egg:      | [3.1](https://github.com/HERA-Team/hera-validation/issues/21) | Apply *data* RFI flags  | `RIMEz` | EoR, GSM | `smoothcal`, `pspec` | [@zacharymartinot][zm] | 
+:egg:      | [3.2](https://github.com/HERA-Team/hera-validation/issues/22) | Apply *data* RFI flags w/systematics | `RIMEz`, `hera_sim` | EoR, GSM, `sigchain.gen_gains`, `sigchain.xtalk` | `smoothcal`, `pspec` | [@steven-murray][sgm] | 
 :egg:      | 3.3 | Simulated RFI and `xRFI` | `healvis`, `hera_sim` | GSM, `rfi` | `xRFI` | [@steven-murray][sgm] |
 
 ### [Step 4](test-series/4): Test full end-to-end pipeline at modest realism
@@ -152,3 +152,4 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 [jsd]: https://github.com/jsdillon
 [al]: https://github.com/aelanman
 [nt]: https://github.com/nithyanandan
+[tb]: https://github.com/tashaleeb
