@@ -87,10 +87,10 @@ Use formal `pyuvsim` [reference simulations](https://github.com/RadioAstronomySo
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | -1.0| `healvis`   | `healvis`    | `GSM`-like      | None                | [@alanman][al] |
-:hammer:   | -1.1| `RIMEz`     | `RIMEz`      | GLEAM           | None                | [@zacharymartinot][zm] | 
+:hammer:   | [-1.0] (https://github.com/HERA-Team/hera-validation/issues/25) | `healvis`   | `healvis`    | `GSM`-like      | None                | [@alanman][al] |
+:hammer:   | [-1.1] (https://github.com/UPennEoR/RIMEz/pull/13) | `RIMEz`     | `RIMEz`      | GLEAM           | None                | [@zacharymartinot][zm] | 
 :hammer:   | -1.2| `PRISim`    | `PRISim`     | GLEAM           | None                | [@nithyanandan][nt]   |
-:egg:      | -1.3| `vis_cpu`   | `vis_cpu`    | GLEAM           | None                | [@steven-murray][sgm] |
+:hammer:   | [-1.3](https://github.com/HERA-Team/hera_sim/pull/33)| `vis_cpu`   | `vis_cpu`    | GLEAM           | None                | [@steven-murray][sgm] |
   
 ### [Step 0](test-series/0/): Test `hera_pspec` directly, without foregrounds.
 Test `hera_pspec`'s ability to reproduce known power spectra from EoR-only simulations of visibilities (which are sky-locked) and noise visibilities. Noise models are both white with frequency and time, and following a fiducial sky model.  Noise is taken from hera_sim and added in visibilities to the various simulators.  This should (eventually) be able to deal with different amounts of coherent and incoherent averaging.
