@@ -103,6 +103,7 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 :egg:      | 0.3 | P(k) from 21cmFAST | `PRISim` | EoR | `hera_pspec` | [@nithyanandan][nt] |
 :egg:      | 0.4 | Flat P(k) + noise | `PRISim`, `hera_sim` | EoR, `noise` | `hera_pspec` | [@nkern][nk] [@zacharymartinot][zm] |
 :egg:      | 0.5 | Sharp-feature P(k) | `RIMEz` | EoR | `hera_pspec` | [@zacharymartinot][zm] [@JiangrongTan][jt] |
+:egg:      | 0.6 | Crazy re-weighting | `RIMEz` | EoR | `hera_pspec` | [@acliu][acl] |
 
 ### [Step 1](test-series/1/): Test `hera_pspec` directly, with foregrounds.
 Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations including unpolarized foregrounds and noise. This includes tests with different amounts of coherent and incoherent averaging.  Error bars should correctly be predicted from noise and signal levels.  
@@ -154,3 +155,4 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 [nt]: https://github.com/nithyanandan
 [tb]: https://github.com/tashaleeb
 [jt]: http://github.com/JianrongTan
+[acl]: http://github.com/acliu
