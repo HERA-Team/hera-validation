@@ -9,11 +9,11 @@ assignees: ''
 
 # Step.Variation.Trial -- Title
 <!-- Give a brief description here, if necessary, of what passed/didn't (very brief, because that info
-     is already in your notebook, right?-->
+     is already in your notebook, right? -->
 Addresses #    <!-- Note the issue number that this step addresses -->
 
 **Contributors:**
-<! -- These should be people who actively worked on the notebook or gave explicit suggestions/help -->
+<!-- These should be people who actively worked on the notebook or gave explicit suggestions/help -->
 
 * @yourself
 * @other_contributors
