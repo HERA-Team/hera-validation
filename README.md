@@ -133,17 +133,25 @@ Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Compo
 :egg:      | [3.2](https://github.com/HERA-Team/hera-validation/issues/22) | Apply *data* RFI flags w/systematics | `RIMEz`, `hera_sim` | EoR, GSM, `sigchain.gen_gains`, `sigchain.xtalk` | `smoothcal`, `pspec` | [@steven-murray][sgm] | 
 :egg:      | 3.3 | Simulated RFI and `xRFI` | `healvis`, `hera_sim` | GSM, `rfi` | `xRFI` | [@steven-murray][sgm] |
 
-### [Step 4](test-series/4): Test full end-to-end pipeline at modest realism
+### [Step 4](test-series/4): Test other systematic effects
+Test the effects of systematics generally treated post-calibration and post-LST-binning, and pre-pspec.
+
+Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
+-----------| ----|-------------|--------------|-----------------|---------------------|----------|
+:egg:      | 4.0 | Cross-talk, ?  | `RIMEz`, `hera_sim` | EoR, GSM, GLEAM, `sigchain` | `H1C`, `pspec` | [@nkern][nk] |
+
+
+### [Step 5](test-series/5): Test full end-to-end pipeline at modest realism
 Test most or all components of the full pipeline (including `redcal`, `abscal`, `xRFI`, `smoothcal`, `hera_pspec`).
 
 Status     | #   | Description | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| ----|-------------|--------------|-----------------|---------------------|----------|
-:hammer:   | 4.0 |   | `healvis`, `hera_sim` | EoR, GSM, GLEAM, `rfi` | `abscal`, `redcal`, `xRFI`, `smoothcal`, `pspec` | [@steven-murray][sgm], [@r-pascua][rp] |
-:egg:      | 4.1 | Test LST-binning and "fringe rate filtering" (time averaging).
-:watch:    | 4.2 | Non-ideal antenna positions
-:watch:    | 4.3 | Antenna-to-antenna beam variation
-:watch:    | 4.4 | Beam real != beam model
-:watch:    | 4.5 | Polarized sky
+:hammer:   | 5.0 |   | `healvis`, `hera_sim` | EoR, GSM, GLEAM, `rfi` | `abscal`, `redcal`, `xRFI`, `smoothcal`, `pspec` | [@steven-murray][sgm], [@r-pascua][rp] |
+:egg:      | 5.1 | Test LST-binning and "fringe rate filtering" (time averaging).
+:watch:    | 5.2 | Non-ideal antenna positions
+:watch:    | 5.3 | Antenna-to-antenna beam variation
+:watch:    | 5.4 | Beam real != beam model
+:watch:    | 5.5 | Polarized sky
 
 [rp]: https://github.com/r-pascua
 [nk]: https://github.com/nkern
