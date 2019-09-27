@@ -1,7 +1,14 @@
-# Step.Variation.Trial -- Title
+---
+name: Formal Test
+about: Submit a formal Validation step test
+title: Step X.X.X: Short Title
+labels: formal-test
+---
 
-<!-- Give a brief description here, if necessary, of what worked/didn't (very brief, because that info
+# Step.Variation.Trial -- Title
+<!-- Give a brief description here, if necessary, of what passed/didn't (very brief, because that info
      is already in your notebook, right?-->
+Addresses #    <!-- Note the issue number that this step addresses -->
 
 **Contributors:**
 <! -- These should be people who actively worked on the notebook or gave explicit suggestions/help -->
