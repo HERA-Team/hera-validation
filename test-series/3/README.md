@@ -1,4 +1,1 @@
-# Validation Step 3
-
-Test the effects of both realistic RFI, and data-driven flags on various parts of the 
-pipeline.
+# [Validation Step 3](../../README.md#step-3-test-effects-of-rfi-and-xrfi)
