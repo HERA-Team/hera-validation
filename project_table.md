@@ -1,3 +1,16 @@
+## Project Plan
+Here follows a formal plan for envisaged tests, automatically generated from our Projects. 
+This list is *not final*: it may be extended or 
+modified at any time. However, it provides a reasonable snapshot of the current status and plans of 
+the validation team.
+
+What the symbols mean:
+
+Sym. | Meaning | Sym. | Meaning | Sym.  |Meaning
+-------| ----- | ----- | ---- | ----- | ------
+:egg:      | Idea in gestation  | :hammer:   | Currently being worked on | :thinking: | PR submitted... 
+:heavy_check_mark: | Passed     | :x:        | Failed | :watch:    | Not required for H1C IDR2
+
 ### [Step -1](https://api.github.com/projects/3274950)
 Use formal pyuvsim [reference simulations](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/tree/master/reference_simulations) as strict comparison points with every visibility simulator used in any other step, using [this template](https://github.com/RadioAstronomySoftwareGroup/pyuvsim/pull/211).
 

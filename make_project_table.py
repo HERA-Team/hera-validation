@@ -31,7 +31,21 @@ if __name__=="__main__":
     # step identifier)
     step_number_pattern = re.compile(r"(-?\d+(\.\d+){0,2})")
 
-    tables = ""
+    tables = """## Project Plan
+Here follows a formal plan for envisaged tests, automatically generated from our Projects. 
+This list is *not final*: it may be extended or 
+modified at any time. However, it provides a reasonable snapshot of the current status and plans of 
+the validation team.
+
+What the symbols mean:
+
+Sym. | Meaning | Sym. | Meaning | Sym.  |Meaning
+-------| ----- | ----- | ---- | ----- | ------
+:egg:      | Idea in gestation  | :hammer:   | Currently being worked on | :thinking: | PR submitted... 
+:heavy_check_mark: | Passed     | :x:        | Failed | :watch:    | Not required for H1C IDR2
+
+"""
+
     for proj in sorted(projects, key=lambda p: p.name):
 
         cols = proj.get_columns()
