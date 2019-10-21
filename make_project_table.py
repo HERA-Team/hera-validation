@@ -1,14 +1,20 @@
 import sys
 from github import Github
 import re
-
-GH_TOKEN = "270073b246bb54cc9c322c07368c57131fdec866"
+import os
 
 table_header = """Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| -----|--------------|-----------------|---------------------|----------|
 """
 
 if __name__=="__main__":
+    if not os.path.exists('.personal-github-token'):
+        raise ValueError("You do not yet have a personal access token for github installed. Create one at https://github.com/settings/tokens "
+              "and paste it into the file .personal-github-token (notice leading .) in this directory.")
+
+    with open(".personal-github-token") as fl:
+        GH_TOKEN = fl.read()
+
     g = Github(GH_TOKEN)
     repo = g.get_repo("HERA-Team/hera-validation")
 
@@ -88,7 +94,8 @@ if __name__=="__main__":
                 status_num = status_num
             )
 
-        tables += f"[{proj.name}]({proj.url}): {proj.body}\n"
+        tables += f"### [{proj.name}]({proj.url})\n"
+        tables += f"{proj.body}\n\n"
         tables += table_header
         for major_step in sorted(step_dict.keys()):
             d = step_dict[major_step]
