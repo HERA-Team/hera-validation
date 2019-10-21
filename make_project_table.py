@@ -1,4 +1,8 @@
-import sys
+"""
+Make the Project Plan table by accessing GitHub issue/PR information.
+
+Requires python 3.4+ and pygithub to be installed.
+"""
 from github import Github
 import re
 import os

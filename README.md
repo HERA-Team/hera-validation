@@ -74,5 +74,6 @@ into a markdown cell.
 ## Project Plan
 To create a simple tabulated version of the Project Plan, download the repo, save a
 [personal access token](https://github.com/settings/tokens) to a file called `.pesonal-github-token`,
-and run `make_project_table.py` at the root directory. A semi-up-to-date version
-of this table is found at [project_table.md](./project_table.md).
+and run `make_project_table.py` at the root directory. 
+Note that you will need python 3.4+ and the `pygithub` code to run this script (`pip install pygithub`).
+A semi-up-to-date version of this table is found at [project_table.md](./project_table.md).
