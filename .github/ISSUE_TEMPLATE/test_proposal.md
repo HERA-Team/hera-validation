@@ -1,5 +1,5 @@
 ---
-name: test_proposal
+name: Test Proposal
 about: Propose a new formal validation test
 title: 'Step X.X: <Short Title>'
 labels: formal-test
