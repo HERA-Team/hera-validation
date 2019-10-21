@@ -1,7 +1,10 @@
 ---
-name: Formal Test Proposal
-about: Proposal a new formal validation test
-title: Step X.X: <Short Title>
+name: test_proposal
+about: Propose a new formal validation test
+title: 'Step X.X: <Short Title>'
+labels: formal-test
+assignees: ''
+
 ---
 
 # Step.Variation: Short Title
