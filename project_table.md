@@ -18,6 +18,9 @@ Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assig
 -----------| -----|--------------|-----------------|---------------------|----------|
 :hammer:  |  [-1](https://api.github.com/repos/HERA-Team/hera-validation/issues/31):  notebook  |   |  |  | [@steven-murray](https://api.github.com/users/steven-murray)  |
 :hammer:  |  [-1.0](https://api.github.com/repos/HERA-Team/hera-validation/issues/25)  | healvis, pyuvsim  | gsm |  |   |
+:hammer:  |  [-1.1](https://api.github.com/repos/HERA-Team/hera-validation/issues/35):  Validation of RIMEz  | pyuvsim, rimez  | gsm |  | [@piyanatk](https://api.github.com/users/piyanatk), [@zacharymartinot](https://api.github.com/users/zacharymartinot)  |
+:hammer:  |  [-1.2](https://api.github.com/repos/HERA-Team/hera-validation/issues/36):  PRISim Validation  | prisim, pyuvsim  | gleam, gsm |  | [@piyanatk](https://api.github.com/users/piyanatk), [@nithyanandan](https://api.github.com/users/nithyanandan)  |
+:hammer:  |  [-1.3](https://api.github.com/repos/HERA-Team/hera-validation/issues/37):  vis_cpu validation  | pyuvsim, viscpu  | gleam |  | [@steven-murray](https://api.github.com/users/steven-murray), [@piyanatk](https://api.github.com/users/piyanatk), [@Jackmastr](https://api.github.com/users/Jackmastr)  |
 
 
 ### [Step 0](https://api.github.com/projects/3274969)
@@ -28,7 +31,9 @@ Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assig
 :heavy_check_mark:  |  [0.0](https://api.github.com/repos/HERA-Team/hera-validation/issues/5):  Noise Pspec  | hera_sim  | noise | pspec | [@nkern](https://api.github.com/users/nkern)  |
 :heavy_check_mark:  |  [0.1](https://api.github.com/repos/HERA-Team/hera-validation/issues/7)  | healvis  | flat | pspec | [@r-pascua](https://api.github.com/users/r-pascua)  |
 :egg:  |  [0.2](https://api.github.com/repos/HERA-Team/hera-validation/issues/23)  | rimez  | powerlaw | pspec |   |
+:hammer:  |  [0.3](https://api.github.com/repos/HERA-Team/hera-validation/issues/38):  P(k) from 21cmFAST  | prisim  | 21cmfast | pspec | [@nithyanandan](https://api.github.com/users/nithyanandan)  |
 :hammer:  |  [0.4](https://api.github.com/repos/HERA-Team/hera-validation/issues/27)  | hera_sim, prisim  | flat, noise | pspec | [@zacharymartinot](https://api.github.com/users/zacharymartinot)  |
+:hammer:  |  [0.5](https://api.github.com/repos/HERA-Team/hera-validation/issues/39):  Sharp-Feature P(k)  | rimez  | feature | pspec | [@zacharymartinot](https://api.github.com/users/zacharymartinot), [@JianrongTan](https://api.github.com/users/JianrongTan)  |
 
 
 ### [Step 1](https://api.github.com/projects/3274994)
@@ -36,6 +41,7 @@ Test `hera_pspec`'s ability to recover EoR P(k) from visibility simulations incl
 
 Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| -----|--------------|-----------------|---------------------|----------|
+:hammer:  |  [1.2](https://api.github.com/repos/HERA-Team/hera-validation/issues/40):  GSM and GLEAM  | healvis, rimez  | flat, gleam, gsm | pspec | [@r-pascua](https://api.github.com/users/r-pascua)  |
 
 
 ### [Step 2](https://api.github.com/projects/3275007)
@@ -56,6 +62,7 @@ Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assig
 :hammer:  |  [3.0](https://api.github.com/repos/HERA-Team/hera-validation/issues/20)  | hera_sim, rimez  | powerlaw, noise | pspec | [@zacharymartinot](https://api.github.com/users/zacharymartinot)  |
 :hammer:  |  [3.1](https://api.github.com/repos/HERA-Team/hera-validation/issues/21)  | rimez  | powerlaw, gsm | pspec, smoothcal | [@zacharymartinot](https://api.github.com/users/zacharymartinot)  |
 :hammer:  |  [3.2](https://api.github.com/repos/HERA-Team/hera-validation/issues/22)  | hera_sim, rimez  | powerlaw, gsm, gains, xtalk | pspec, smoothcal | [@steven-murray](https://api.github.com/users/steven-murray), [@nkern](https://api.github.com/users/nkern)  |
+:hammer:  |  [3.3](https://api.github.com/repos/HERA-Team/hera-validation/issues/41):  Test of xRFI  | hera_sim, rimez  | powerlaw, gleam, gsm, gains, rfi | pspec, redcal, smoothcal, xrfi | [@steven-murray](https://api.github.com/users/steven-murray), [@lwhitler](https://api.github.com/users/lwhitler)  |
 
 
 ### [Step 4](https://api.github.com/projects/3275024)
@@ -63,6 +70,7 @@ Test of removal of post-analysis pre-pspec "pre-processing".
 
 Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| -----|--------------|-----------------|---------------------|----------|
+:hammer:  |  [4.0](https://api.github.com/repos/HERA-Team/hera-validation/issues/42):  Basic End-to-End  | hera_sim, rimez  | powerlaw, gleam, gsm, gains, reflections, rfi, xtalk | abscal, casa, pspec, redcal, smoothcal, xrfi | [@steven-murray](https://api.github.com/users/steven-murray), [@r-pascua](https://api.github.com/users/r-pascua)  |
 
 
 ### [Step 5](https://api.github.com/projects/3275030)
