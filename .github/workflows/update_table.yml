@@ -22,11 +22,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install pygithub
       - name: Checkout correct branch
-        run: git checkout project-table
+        run: git checkout system-description
       - name: Update project table
         run: python make_project_table.py
       - name: Commit and push
         run: |
           git add .
           git commit -m "actions-bot: Update project table"
+          echo ${{ secrets.GITHUB_TOKEN }}
           git push -u origin project-table ${{ secrets.GITHUB_TOKEN }}

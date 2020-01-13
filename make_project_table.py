@@ -13,6 +13,8 @@ table_header = """Status     | #    | Simulator(s) | Sim. Components | Analysis 
 """
 
 if __name__=="__main__":
+    print(sys.argv)
+
     if len(sys.argv) > 1:
         GH_TOKEN = sys.argv[-1]
     else:
