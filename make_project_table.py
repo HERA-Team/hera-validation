@@ -13,13 +13,16 @@ table_header = """Status     | #    | Simulator(s) | Sim. Components | Analysis 
 """
 
 if __name__=="__main__":
-    if not os.path.exists('.personal-github-token'):
-        raise ValueError("You do not yet have a personal access token for github installed. Create one at https://github.com/settings/tokens "
-              "and paste it into the file .personal-github-token (notice leading .) in this directory.")
-
     if len(sys.argv) > 1:
         GH_TOKEN = sys.argv[-1]
     else:
+        if not os.path.exists('.personal-github-token'):
+            raise ValueError(
+                "You do not yet have a personal access token for github installed. Create one at "
+                "https://github.com/settings/tokens "
+                "and paste it into the file .personal-github-token (notice leading .) in this "
+                "directory.")
+
         with open(".personal-github-token") as fl:
             GH_TOKEN = fl.read()
 
