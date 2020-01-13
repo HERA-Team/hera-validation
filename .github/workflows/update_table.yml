@@ -1,0 +1,30 @@
+name: update_project_table
+on:
+  issues:
+    types: [opened, deleted, closed, reopened, assigned, unassigned, labeled, unlabeled, milestoned, demilestoned]
+  pull_request:
+    types: [assigned, unassigned, labeled, unlabeled, opened, closed, reopened, ready_for_review, review_requested]
+
+jobs:
+  update_table:
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pygithub
+      - name: Checkout correct branch
+        run: git checkout project-table
+      - name: Update project table
+        run: python make_project_table.py
+      - name: Commit and push
+        run: |
+          git add .
+          git commit -m "actions-bot: Update project table"
+          git push -u origin project-table ${{ secrets.GITHUB_TOKEN }}

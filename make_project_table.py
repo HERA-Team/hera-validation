@@ -6,6 +6,7 @@ Requires python 3.4+ and pygithub to be installed.
 from github import Github
 import re
 import os
+import sys
 
 table_header = """Status     | #    | Simulator(s) | Sim. Components | Analysis Components | Assigned |
 -----------| -----|--------------|-----------------|---------------------|----------|
@@ -16,8 +17,11 @@ if __name__=="__main__":
         raise ValueError("You do not yet have a personal access token for github installed. Create one at https://github.com/settings/tokens "
               "and paste it into the file .personal-github-token (notice leading .) in this directory.")
 
-    with open(".personal-github-token") as fl:
-        GH_TOKEN = fl.read()
+    if len(sys.argv) > 1:
+        GH_TOKEN = sys.argv[-1]
+    else:
+        with open(".personal-github-token") as fl:
+            GH_TOKEN = fl.read()
 
     g = Github(GH_TOKEN)
     repo = g.get_repo("HERA-Team/hera-validation")
