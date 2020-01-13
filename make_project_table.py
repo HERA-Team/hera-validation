@@ -30,16 +30,6 @@ if __name__=="__main__":
     repo = g.get_repo("HERA-Team/hera-validation")
 
     projects = repo.get_projects()
-
-    # issues = repo.get_issues(state='all')
-    # prs = repo.get_pulls(state='all')
-    #
-    # # Isolate issues/prs that define formal tests/steps
-    # steps = [issue for issue in everything if "formal-test" in [lbl.name for lbl in issue.labels]]
-    #
-    # everything = [issue for issue in issues] + [pr for pr in prs]
-    # This finds anything with the pattern X.X.X in a string (i.e. the STEP.MAJOR part of a
-    # step identifier)
     step_number_pattern = re.compile(r"(-?\d+(\.\d+){0,2})")
 
     tables = """## Project Plan
