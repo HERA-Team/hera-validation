@@ -1,13 +1,15 @@
 name: update_project_table
 on:
-  push:
-  issues:
-    types: [opened, deleted, closed, reopened, assigned, unassigned, labeled, unlabeled, milestoned, demilestoned]
-  pull_request:
-    types: [assigned, unassigned, labeled, unlabeled, opened, closed, reopened, ready_for_review, review_requested]
+  # push:
+  # issues:
+  #   types: [opened, deleted, closed, reopened, assigned, unassigned, labeled, unlabeled, milestoned, demilestoned]
+  # pull_request:
+  #  types: [assigned, unassigned, labeled, unlabeled, opened, closed, reopened, ready_for_review, review_requested]
+  repository_dispatch:
 
 jobs:
   update_table:
+    if: github.event.action == 'make_project_table'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1

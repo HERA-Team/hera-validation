@@ -1,0 +1,4 @@
+buttons:
+  - title: Refresh Project Table
+    action: "make_project_table"
+    description: Refresh Project Table
