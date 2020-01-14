@@ -25,8 +25,12 @@ jobs:
         run: git checkout system-description
       - name: Update project table
         run: python make_project_table.py ${{ secrets.GITHUB_TOKEN }}
-      - name: Commit and push
+      - name: Commit
         run: |
-          git add .
-          git commit -m "actions-bot: Update project table"
-          git push -u origin project-table
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "git-bot: Update table" -a
+      - name: Push changes
+          uses: ad-m/github-push-action@master
+          with:
+            github_token: ${{ secrets.GITHUB_TOKEN }}
