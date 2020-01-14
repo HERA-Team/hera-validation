@@ -1,4 +1,6 @@
 ## Project Plan
+[![Run Action](https://github-action-button.web.app/buttons/simple.svg?name=Refresh%20Project%20Table&eventType=make_project_table&type=simple)](https://github-action-button.web.app/repos/HERA-Team/hera-validation/button?name=Refresh%20Project%20Table&eventType=make_project_table&type=simple)
+
 Here follows a formal plan for envisaged tests, automatically generated from our Projects. 
 This list is *not final*: it may be extended or 
 modified at any time. However, it provides a reasonable snapshot of the current status and plans of 
