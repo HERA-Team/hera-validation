@@ -24,9 +24,14 @@ jobs:
       - name: Checkout correct branch
         run: git checkout system-description
       - name: Update project table
-        run: python make_project_table.py ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir tmp
+          cd tmp
+          python ../make_project_table.py ${{ secrets.GITHUB_TOKEN }}
       - name: Checkout project-table
-        run: git checkout project-table
+        run: |
+          git checkout project-table
+          mv project_table.md ../
       - name: Commit
         run: |
           git config --local user.email "action@github.com"
