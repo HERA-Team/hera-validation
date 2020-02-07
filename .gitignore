@@ -2,3 +2,5 @@
 *.md~
 
 \.ipynb_checkpoints/
+
+*jupyter.out
