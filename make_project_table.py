@@ -16,14 +16,13 @@ if __name__=="__main__":
     if len(sys.argv) > 1:
         GH_TOKEN = sys.argv[-1]
     else:
-        if not os.path.exists('.personal-github-token'):
+        if not os.path.exists(os.path.expanduser('~/.validation-github-token')):
             raise ValueError(
                 "You do not yet have a personal access token for github installed. Create one at "
                 "https://github.com/settings/tokens "
-                "and paste it into the file .personal-github-token (notice leading .) in this "
-                "directory.")
+                "and paste it into the file ~/.validation-github-token.")
 
-        with open(".personal-github-token") as fl:
+        with open(os.path.expanduser("~/.validation-github-token")) as fl:
             GH_TOKEN = fl.read()
 
     g = Github(GH_TOKEN)
