@@ -288,20 +288,11 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
     return
 
 def _parse_filename_for_cmp(filename):
-    """
-    Infer the sky component from the provided filename.
-    
-    Parameters
-    ----------
-    filename : str or path-like object
-        Name of the file to parse; may be a path to the file.
-        
-    Returns
-    -------
-    sky_cmp : str
-        Inferred sky component. Should be one of the following: 
-        ('foregrounds', 'eor', 'sum').
-    """
+    """Infer the sky component from the provided filename."""
     cmp_re = re.compile("[a-z]+.uvh5")
     sky_cmp = cmp_re.findall(str(filename))
-    return '' if not sky_cmp else sky_cmp[0][:-5]
+    if sky_cmp == []:
+        raise ValueError(
+            f"Simulation component could not be inferred from {filename}."
+        )
+    return sky_cmp[0][:-5]
