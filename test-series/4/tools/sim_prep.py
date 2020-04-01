@@ -58,6 +58,101 @@ def add_noise(sim, Trx=100, seed=1010):
     )
     return sim, noise
 
+def add_gains(sim, inplace=True, **gain_params):
+    """
+    Add per-antenna bandpass gains to the simulation.
+
+    Parameters
+    ----------
+    sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
+        The object containing the simulation data and metadata.
+
+    inplace : bool, optional
+        Whether to apply the gains directly to the simulation or to a 
+        copy of the simulation. Default is to apply directly to the 
+        simulation.
+
+    **gain_params
+        The parameters for simulating bandpass gains.
+
+    Returns
+    -------
+    gains : dict
+        Dictionary mapping antenna numbers to bandpass gains as a 
+        function of frequency (and potentially time).
+
+    corrupted_sim : :class:`pyuvdata.UVData`
+        Simulation with bandpass gains applied. Only returned if the 
+        gains are applied in-place.
+    """
+    sim = _sim_to_uvd(sim, inplace)
+
+    gains = None # placeholder
+    return gains if inplace else gains, sim
+
+def add_reflections(sim, inplace=True, **reflection_params):
+    """
+    Add per-antenna reflection gains to the simulation.
+
+    Parameters
+    ----------
+    sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
+        The object containing the simulation data and metadata.
+
+    inplace : bool, optional
+        Whether to apply the gains directly to the simulation or to a 
+        copy of the simulation. Default is to apply directly to the 
+        simulation.
+
+    **reflection_params
+        The parameters for simulating reflection gains.
+
+    Returns
+    -------
+    gains : dict
+        Dictionary mapping antenna numbers to reflection gains as a 
+        function of frequency (and potentially time).
+
+    corrupted_sim : :class:`pyuvdata.UVData`
+        Simulation with reflection gains applied. Only returned if the 
+        gains are applied in-place.
+    """
+    sim = _sim_to_uvd(sim, inplace)
+
+    gains = None # placeholder
+    return gains if inplace else gains, sim
+
+def add_xtalk(sim, inplace=True, **xtalk_params):
+    """
+    Add cross-coupling crosstalk to the simulation's cross-correlations.
+
+    Parameters
+    ----------
+    sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
+        The object containing the simulation data and metadata.
+
+    inplace : bool, optional
+        Whether to apply the crosstalk directly to the simulation or 
+        to a copy of the simulation. Default is to apply directly to 
+        the simulation.
+
+    **xtalk_params
+        The parameters for simulating crosstalk.
+
+    Returns
+    -------
+    xtalk_data : :class:`pyuvdata.UVData`
+        Data for the crosstalk visibilities.
+
+    corrupted_sim : :class:`pyuvdata.UVData`
+        Simulation with crosstalk applied. Only returned if the 
+        crosstalk is added in-place.
+    """
+    sim = _sim_to_uvd(sim, inplace)
+
+    xtalk = None # placeholder
+    return xtalk if inplace else xtalk, sim
+
 def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=True):
     """
     Modify simulated data to be consistent with an observation's metadata.
@@ -147,10 +242,12 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     Notes
     -----
     See the memo "Antennas, Baselines, and Maximum Overlap" for details on 
-    the antenna selection process.
+    the antenna selection process. It is worth noting that the algorithm 
+    implemented here is *not* appropriate for general arrays, but the 
+    general case should reduce to this case for an array with appropriate 
+    symmetry, as we have for the RIMEz simulation.
     """
-    if not inplace:
-        sim_uvd = copy.deepcopy(sim_uvd)
+    sim_uvd = _sim_to_uvd(sim_uvd, inplace)
 
     # Find the optimal intersection and get the map between antenna numbers.
     sim_ENU_antpos = _get_antpos(sim_uvd)
@@ -217,7 +314,7 @@ def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
         reference data. Only returned if ``inplace`` is set to False.
     """
     # Convert the simulation to a HERAData object. 
-    use_uvd = sim_uvd if inplace else copy.deepcopy(sim_uvd)
+    use_uvd = _sim_to_uvd(sim_uvd, inplace)
     hd = to_HERAData(use_uvd)
     hd_metas = hd.get_metadata_dict()
 
@@ -291,7 +388,7 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
-    # get some useful metadata
+    # Get some useful metadata.
     uvd = UVData()
     uvd.read(ref_file, read_data=False)
     integrations_per_file = uvd.Ntimes
@@ -299,7 +396,7 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
     jd_major = int(np.floor(times[0]))
     Nfiles = int(times.size / integrations_per_file)
     
-    # actually chunk and save the data
+    # Actually chunk the data and write to disk.
     for Nfile in range(Nfiles):
         start = Nfile * integrations_per_file
         stop = start + integrations_per_file
@@ -316,6 +413,13 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         this_uvd = sim_uvd.select(times=use_times, inplace=False)
         this_uvd.write_uvh5(save_path)
     return
+
+def _sim_to_uvd(sim, inplace):
+    """Update simulation object type and possibly return a copy."""
+    sim = sim if inplace else copy.deepcopy(sim)
+    if isinstance(sim, hera_sim.Simulator):
+        sim = sim.data
+    return sim
 
 def _get_array_intersection(sim_antpos, ref_antpos, tol=1.0):
     """Find the optimal choice of simulation subarray and return it."""
