@@ -1,3 +1,4 @@
+import copy
 import re
 import numpy as np
 from scipy import interpolate
@@ -80,32 +81,29 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
         Whether to overwrite files that may share the same name as the new files to 
         be saved in ``save_dir``. Default is to overwrite files.
         
-    Returns
-    -------
-    ref_ants : list of int
-        List of reference antennas remaining after antenna downselection.
-        
-    sim_ants : list of int
-        List of simulation antennas remaining after antenna downselection.
-        
-    baseline_map : dict
-        Dictionary mapping unique reference baselines to unique simulation baselines.
+    Notes
+    -----
+    The modified simulation data has its antennas relabeled and repositioned to match 
+    the labels and positions of the observational data. Any antenna from the 
+    simulation that does not correspond to an antenna used in observation is excluded 
+    from the modified simulation data.
     """
     # Ensure the data files are a list and load in their metadata.
     data_files = _listify(data_files)
     ref_uvd = UVData()
     ref_uvd.read(data_files, read_data=False)
     
-    # Get the sky component if not specified
+    # Get the sky component if not specified.
     sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
     
     # Load in the simulation data, but only the linear vispols.
+    # XXX confirm that we only want to use the linear polarizations
     use_pols = [polstr2num(pol) for pol in ('xx', 'yy')]
     sim_uvd = UVData()
     sim_uvd.read(sim_file, polarizations=use_pols)
     
     # Find and use the intersection of the RIMEz and H1C arrays.
-    ref_ants, sim_ants, baseline_map = downselect_antennas(sim_uvd, ref_uvd)
+    downselect_antennas(sim_uvd, ref_uvd, inplace=True)
     
     # Downselect in time and rephase LSTs to match the reference data.
     rephase_to_reference(sim_uvd, ref_uvd)
@@ -113,9 +111,9 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     # Chunk the simulation data and write to disk.
     chunk_sim_and_save(sim_uvd, data_files[0], save_dir, sky_cmp, clobber)
     
-    return ref_ants, sim_ants, baseline_map
+    return
 
-def downselect_antennas(sim_uvd, ref_uvd, inplace=True):
+def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     """
     Downselect simulated array to match unique baselines from reference.
     
@@ -127,34 +125,66 @@ def downselect_antennas(sim_uvd, ref_uvd, inplace=True):
     ref_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the reference data. 
         Only needs to have the metadata loaded.
+        
+    tol : float, optional
+        The maximum allowable discrepancy in antenna position components.
+        Default is 1 meter.
+        
+    inplace : bool, optional
+        Whether to perform the downselection in-place. Default is True.
                 
     Returns
     -------
     new_sim_uvd : :class:`pyuvdata.UVData`
-        :class:`pyuvdata.UVData` object whose antennas have been relabeled, 
-        and whose data array has been rearranged to reflect the change in 
-        antenna labels. If the number of antennas to keep is less than 
-        those in the simulated data, then a downselection is performed on 
-        the simulated data.
-        
-    ref_ants : list of int
-        List of antenna numbers that remain in the reference data.
-        
-    sim_ants : list of int
-        List of antenna numbers that remain in the simulated data.
-        
-    baseline_map : dict
-        Dictionary mapping unique baselines between data sets. The keys 
-        of this dictionary are the antenna pairs from the reference data, 
-        and the values are the antenna pairs from the simulated data.
+        Simulation data adjusted to contain a subset of the simulated array
+        such that, after appropriately translating the antenna positions, 
+        the maximum number of antennas/unique baselines remain in the 
+        intersection of the simulation subarray and the reference array. 
+        The relevant attributes of the simulation data are updated 
+        accordingly. This is only returned if downselection is not performed 
+        in-place.
+
+    Notes
+    -----
+    See the memo "Antennas, Baselines, and Maximum Overlap" for details on 
+    the antenna selection process.
     """
-    # TODO: actually write the code
-    ref_ants, sim_ants, baseline_map = [], [], {}
-
     if not inplace:
-        return ref_ants, sim_ants, baseline_map
+        sim_uvd = copy.deepcopy(sim_uvd)
 
-    return sim_uvd, ref_ants, sim_ants, baseline_map
+    # Find the optimal intersection and get the map between antenna numbers.
+    sim_ENU_antpos = _get_antpos(sim_uvd)
+    ref_ENU_antpos = _get_antpos(ref_uvd)
+    array_intersection = _get_array_intersection(sim_ENU_antpos, ref_ENU_antpos, tol)
+    sim_to_ref_ant_map = _get_antenna_map(array_intersection, ref_ENU_antpos, tol)
+    
+    # Perform a downselection and update the relevant metadata accordingly.
+    sim_uvd.select(antenna_nums=list(array_intersection.keys()), keep_all_metadata=False)
+    ref_antpos = _get_antpos(ref_uvd, ENU=False)
+    sim_antpos = sim_uvd.antenna_positions
+    sim_ants = list(sim_uvd.antenna_numbers)
+    
+    # Prepare new metadata attributes.
+    new_sim_ants = np.empty_like(sim_ants)
+    new_sim_antpos = np.empty_like(sim_antpos)
+    new_ant_1_array = np.empty_like(sim_uvd.ant_1_array)
+    new_ant_2_array = np.empty_like(sim_uvd.ant_2_array)
+    for sim_ant, ref_ant in sim_to_ref_ant_map.items():
+        new_ant_1_array[sim_uvd.ant_1_array == sim_ant] = ref_ant
+        new_ant_2_array[sim_uvd.ant_2_array == sim_ant] = ref_ant
+        sim_ant_index = sim_ants.index(sim_ant)
+        new_sim_ants[sim_ant_index] = ref_ant
+        new_sim_antpos[sim_ant_index] = ref_antpos[ref_ant]
+        
+    # Actually update the metadata.
+    sim_uvd.ant_1_array = new_ant_1_array
+    sim_uvd.ant_2_array = new_ant_2_array
+    sim_uvd.antenna_numbers = new_sim_ants
+    sim_uvd.antenna_positions = new_sim_antpos
+    sim_uvd.history += "\nAntennas adjusted to optimally match H1C antennas."
+    
+    if not inplace:
+        return sim_uvd
 
 def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
     """
@@ -197,7 +227,7 @@ def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
     ref_lsts = np.unique(ref_uvd.lst_array)
     ref_times = np.unique(ref_uvd.time_array)
     
-    # Find out which times to use and how much to rephase in LST
+    # Find out which times to use and how much to rephase in LST.
     start_lst = ref_lsts[0]
     dist_from_start = np.abs(sim_lsts - start_lst)
     start_ind = np.argwhere(
@@ -212,7 +242,7 @@ def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
     hd.select(times=use_times, keep_all_metadata=False)
     data, _, _ = hd.build_datacontainers()
 
-    # Build the baseline -> ENU baseline vector dictionary.
+    # Build the antpair -> ENU baseline vector dictionary.
     antpos, ants = hd.get_ENU_antpos()
     bls = {bl : None for bl in data.bls()}
     ants = list(ants)
@@ -286,6 +316,87 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         this_uvd = sim_uvd.select(times=use_times, inplace=False)
         this_uvd.write_uvh5(save_path)
     return
+
+def _get_array_intersection(sim_antpos, ref_antpos, tol=1.0):
+    """Find the optimal choice of simulation subarray and return it."""
+    optimal_translation = _get_optimal_translation(sim_antpos, ref_antpos, tol)
+    new_antpos = {ant : pos + optimal_translation for ant, pos in sim_antpos.items()}
+    intersection = {
+        ant : pos for ant, pos in new_antpos.items()
+        if any([np.allclose(pos, ref_pos, atol=tol) for ref_pos in ref_antpos.values()])
+    }
+    return intersection
+
+def _get_antenna_map(sim_antpos, ref_antpos, tol=1.0):
+    """Find a mapping from simulation antennas to reference antennas."""
+    antenna_map = {}
+    refants = list(ref_antpos.keys())
+    for ant, pos in sim_antpos.items():
+        refant_index = np.argwhere(
+            [np.allclose(pos, ref_pos, atol=tol) for ref_pos in ref_antpos.values()]
+        ).flatten()
+        if refant_index.size == 0:
+            continue
+        antenna_map[ant] = refants[refant_index[0]]
+    return antenna_map
+
+def _get_antpos(uvd, ENU=True):
+    """Retrieve the {ant : pos} dictionary from the data."""
+    if ENU:
+        pos, ant = uvd.get_ENU_antpos()
+    else:
+        ant = uvd.antenna_numbers
+        pos = uvd.antenna_positions
+    return dict(zip(ant, pos))
+
+def _get_optimal_translation(sim_antpos, ref_antpos, tol=1.0):
+    """Find the translation that maximizes the overlap between antenna arrays."""
+    # Get a dictionary of translations; keys are sim_ant -> ref_ant.
+    translations = _build_translations(sim_antpos, ref_antpos, tol)
+    intersection_sizes = {}
+    
+    # Calculate the number of antennas in the intersection for each pair of arrays.
+    for sim_ant_to_ref_ant, translation in translations.items():
+        new_sim_antpos = {
+            ant : pos + translation for ant, pos in sim_antpos.items()
+        }
+        Nintersections = 0
+        for pos in new_sim_antpos.values():
+            pos_in_ref = any(
+                [np.allclose(pos, ref_pos, atol=tol)
+                 for ref_pos in ref_antpos.values()]
+            )
+            Nintersections += pos_in_ref
+        intersection_sizes[sim_ant_to_ref_ant] = Nintersections
+        
+    # Choose the translation that has the most antennas in the intersection.
+    sim_to_ref_keys = list(translations.keys())
+    intersections_per_translation = np.array(list(intersection_sizes.values()))
+    index = np.argwhere(
+        intersections_per_translation == intersections_per_translation.max()
+    ).flatten()[0]
+    return translations[sim_to_ref_keys[index]]
+
+def _build_translations(sim_antpos, ref_antpos, tol=1.0):
+    """Build all possible translations that overlap at least one antenna."""
+    sim_ants = list(sim_antpos.keys())
+    ref_ants = list(ref_antpos.keys())
+    translations = {
+        f"{sim_ant}->{ref_ant}" : ref_antpos[ref_ant] - sim_antpos[sim_ant]
+        for sim_ant in sim_ants for ref_ant in ref_ants
+    }
+    unique_translations = {}
+    for key, translation in translations.items():
+        if not unique_translations:
+            unique_translations[key] = translation
+            continue
+        keep_translation = not any(
+            [np.allclose(translation, unique_translation, atol=tol)
+             for unique_translation in unique_translations.values()]
+        )
+        if keep_translation:
+            unique_translations[key] = translation
+    return unique_translations
 
 def _parse_filename_for_cmp(filename):
     """Infer the sky component from the provided filename."""
