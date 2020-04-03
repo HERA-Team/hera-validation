@@ -1,4 +1,5 @@
 import copy
+import os
 import re
 import numpy as np
 from scipy import interpolate
@@ -8,13 +9,14 @@ from pyuvdata.utils import polstr2num
 from hera_cal.io import to_HERAData
 from hera_cal.utils import lst_rephase
 from hera_sim import noise, Simulator
-if hera_sim.version.startswith('0'):
+import hera_sim
+if hera_sim.version.version.startswith('0'):
     from hera_sim.rfi import _listify
 else:
     from hera_sim.utils import _listify
 
 
-def add_noise(sim, Trx=100, seed=1010):
+def add_noise(sim, Trx=100, seed=None):
     """
     Add thermal noise to a UVData object, based on its auto-correlations.
 
@@ -49,13 +51,22 @@ def add_noise(sim, Trx=100, seed=1010):
     # XXX The xx and yy polarizations are rotated 90 degrees relative to one
     # another, so does it make sense to use the xx polarization for adding 
     # noise to the data for both the xx and yy polarizations?
-    autos = sim.data.get_data(*antpair, 'xx') * Jy_to_K[None, :]
-    autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, autos.real)
+    xx_autos = sim.data.get_data(*antpair, 'xx') * Jy_to_K[None, :]
+    xx_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, xx_autos.real)
 
-    np.random.seed(seed)
-    noise = sim.add_noise(
-        'thermal_noise', Tsky_mdl=autos_interp, Trx=Trx, ret_vis=True
+    yy_autos = sim.data.get_data(*antpair, 'yy') * Jy_to_K[None, :]
+    yy_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, yy_autos.real)
+
+    if seed is not None:
+        np.random.seed(seed)
+    xx_noise = sim.add_noise(
+        'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, ret_vis=True, add_vis=False
     )
+    yy_noise = sim.add_noise(
+        'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, ret_vis=True, add_vis=False
+    )
+    noise = np.zeros_like(xx_noise, dtype=np.complex)
+    
     return sim, noise
 
 def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=True):
@@ -86,7 +97,20 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     The modified simulation data has its antennas relabeled and repositioned to match 
     the labels and positions of the observational data. Any antenna from the 
     simulation that does not correspond to an antenna used in observation is excluded 
-    from the modified simulation data.
+    from the modified simulation data. See ``downselect_antennas`` to learn more 
+    about how the antenna-related metadata is modified. Note that this process 
+    requires that the data be fully inflated; in the interest of keeping memory 
+    consumption low, this step is performed after LST rephasing.
+    
+    It is also worth noting that the modified simulation data has not had its flag or 
+    nsamples arrays modified in any way, but its data array has been modified. The 
+    modified data has been downselected in time, rephased to have its LSTs match the 
+    observed LSTs, and its time and LST arrays have been updated to match the observed 
+    data.
+    
+    The modified simulation data is chunked into files containing the same number of 
+    integrations as the observation files (assuming a uniform number of integration 
+    per file) and written to disk. 
     """
     # Ensure the data files are a list and load in their metadata.
     data_files = _listify(data_files)
@@ -97,16 +121,21 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
     
     # Load in the simulation data, but only the linear vispols.
-    # XXX confirm that we only want to use the linear polarizations
     use_pols = [polstr2num(pol) for pol in ('xx', 'yy')]
     sim_uvd = UVData()
     sim_uvd.read(sim_file, polarizations=use_pols)
+
+    # Downselect in time and rephase LSTs to match the reference data.
+    sim_uvd = rephase_to_reference(sim_uvd, ref_uvd)
+
+    # Inflate the simulation so antenna downselection can actually be done.
+    sim_uvd.inflate_by_redundancy()
     
     # Find and use the intersection of the RIMEz and H1C arrays.
     downselect_antennas(sim_uvd, ref_uvd, inplace=True)
     
-    # Downselect in time and rephase LSTs to match the reference data.
-    rephase_to_reference(sim_uvd, ref_uvd)
+    # Make sure the data is conjugated properly so redcal doesn't break.
+    sim_uvd.conjugate_bls('ant1<ant2')
     
     # Chunk the simulation data and write to disk.
     chunk_sim_and_save(sim_uvd, data_files[0], save_dir, sky_cmp, clobber)
@@ -162,7 +191,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     sim_uvd.select(antenna_nums=list(array_intersection.keys()), keep_all_metadata=False)
     ref_antpos = _get_antpos(ref_uvd, ENU=False)
     sim_antpos = sim_uvd.antenna_positions
-    sim_ants = list(sim_uvd.antenna_numbers)
+    sim_ants = sim_uvd.antenna_numbers
     
     # Prepare new metadata attributes.
     new_sim_ants = np.empty_like(sim_ants)
@@ -172,7 +201,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     for sim_ant, ref_ant in sim_to_ref_ant_map.items():
         new_ant_1_array[sim_uvd.ant_1_array == sim_ant] = ref_ant
         new_ant_2_array[sim_uvd.ant_2_array == sim_ant] = ref_ant
-        sim_ant_index = sim_ants.index(sim_ant)
+        sim_ant_index = sim_ants.tolist().index(sim_ant)
         new_sim_ants[sim_ant_index] = ref_ant
         new_sim_antpos[sim_ant_index] = ref_antpos[ref_ant]
         
@@ -186,7 +215,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     if not inplace:
         return sim_uvd
 
-def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
+def rephase_to_reference(sim_uvd, ref_uvd):
     """
     Rephase simulation LSTs to reference LSTs after downselection in time.
     
@@ -201,25 +230,19 @@ def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
     ref_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the reference data. 
         Only the metadata for this object needs to be read.
-        
-    inplace : bool, optional
-        Whether to perform the rephasing and downselection on the 
-        simulated data or on a copy of the data. Default is to perform 
-        the downselection and rephasing in-place.
 
     Returns
     -------
-    new_sim_uvd : :class:`hera_cal.io.HERAData`
-        :class:`hera_cal.io.HERAData` object containing the modified 
+    new_sim_uvd : :class:`pyuvdata.UVData`
+        :class:`pyuvdata.UVData` object containing the modified 
         simulation data. The modified data has been rephased to match 
         the reference LSTs and has had its time and LST arrays adjusted 
         to contain only the times and LSTs that are present in the 
-        reference data. Only returned if ``inplace`` is set to False.
+        reference data.
     """
     # Convert the simulation to a HERAData object. 
-    use_uvd = sim_uvd if inplace else copy.deepcopy(sim_uvd)
-    hd = to_HERAData(use_uvd)
-    hd_metas = hd.get_metadata_dict()
+    sim_uvd = to_HERAData(copy.deepcopy(sim_uvd))
+    hd_metas = sim_uvd.get_metadata_dict()
 
     # Load in useful metadata.
     sim_lsts = hd_metas['lsts']
@@ -229,41 +252,42 @@ def rephase_to_reference(sim_uvd, ref_uvd, inplace=True):
     
     # Find out which times to use and how much to rephase in LST.
     start_lst = ref_lsts[0]
-    dist_from_start = np.abs(sim_lsts - start_lst)
-    start_ind = np.argwhere(
-        dist_from_start == dist_from_start.min()
-    ).flatten()[0]
+    start_ind = np.argmin(np.abs(sim_lsts - start_lst))
     lst_slice = slice(start_ind, start_ind + ref_uvd.Ntimes)
     use_times = sim_times[lst_slice]
     use_lsts = sim_lsts[lst_slice]
     dlst = ref_lsts - use_lsts
 
     # Downselect in time and load data.
-    hd.select(times=use_times, keep_all_metadata=False)
-    data, _, _ = hd.build_datacontainers()
+    sim_uvd.select(times=use_times)
+    data, _, _ = sim_uvd.build_datacontainers()
 
     # Build the antpair -> ENU baseline vector dictionary.
-    antpos, ants = hd.get_ENU_antpos()
+    antpos, ants = sim_uvd.get_ENU_antpos()
     bls = {bl : None for bl in data.bls()}
     ants = list(ants)
     for bl in bls:
         ai, aj = bl[:2]
         i, j = ants.index(ai), ants.index(aj)
-        bls[bl] = antpos[i] - antpos[j]
+        bls[bl] = antpos[j] - antpos[i]
 
     # Rephase and update the data.
-    hera_cal.utils.lst_rephase(data, bls, hd_metas['freqs'], dlst)
-    hd.update(data=data)
-    new_sim_lsts = np.zeros_like(hd.lst_array)
-    new_sim_times = np.zeros_like(hd.time_array)
+    lst_rephase(data, bls, hd_metas['freqs'], dlst)
+    sim_uvd.update(data=data)
+    new_sim_lsts = np.zeros_like(sim_uvd.lst_array)
+    new_sim_times = np.zeros_like(sim_uvd.time_array)
     for use_time, ref_time, ref_lst in zip(use_times, ref_times, ref_lsts):
-        blt_slice = np.argwhere(sim_times == use_time)
+        blt_slice = np.argwhere(sim_uvd.time_array == use_time)
         new_sim_lsts[blt_slice] = ref_lst
         new_sim_times[blt_slice] = ref_time
-    hd.time_array = new_sim_times
-    hd.lst_array = new_sim_lsts
+    sim_uvd.time_array = new_sim_times
+    sim_uvd.lst_array = new_sim_lsts
 
-    return hd if not inplace else None
+    # Ensure that we return a UVData object so that chunk_sim_and_save doesn't break.
+    return_uvd = UVData()
+    for _property in return_uvd:
+        setattr(return_uvd, _property, getattr(sim_uvd, _property))
+    return return_uvd
 
 def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
     """
@@ -291,7 +315,7 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
-    # get some useful metadata
+    # Get some useful metadata.
     uvd = UVData()
     uvd.read(ref_file, read_data=False)
     integrations_per_file = uvd.Ntimes
@@ -299,7 +323,7 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
     jd_major = int(np.floor(times[0]))
     Nfiles = int(times.size / integrations_per_file)
     
-    # actually chunk and save the data
+    # Actually chunk and save the data.
     for Nfile in range(Nfiles):
         start = Nfile * integrations_per_file
         stop = start + integrations_per_file
@@ -314,7 +338,7 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
             if clobber:
                 print(f"File {save_path} exists; clobbering.")
         this_uvd = sim_uvd.select(times=use_times, inplace=False)
-        this_uvd.write_uvh5(save_path)
+        this_uvd.write_uvh5(save_path, clobber=clobber)
     return
 
 def _get_array_intersection(sim_antpos, ref_antpos, tol=1.0):
