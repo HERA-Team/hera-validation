@@ -35,38 +35,42 @@ def add_noise(sim, Trx=100, seed=None):
     lsts = np.unique(sim.data.lst_array)
     freqs = np.unique(sim.data.freq_array)
 
-    # Find out which antenna has the autocorrelation data, since we'll
-    # add noise before inflating and adding other systematics.
+    # Find out which antenna has the autocorrelation data, in case we
+    # add noise before inflating.
     antpair = list(
         [ants for ants in sim.data.get_antpairs() if ants[0] == ants[1]]
     )[0]
 
     # Set up to use the autos to set the noise level
     freqs_GHz = freqs / 1e9  # GHz
-    # XXX Has anyone checked that the h1c beam polynomial used in hera_sim
-    # actually matches the beam used in the RIMEz simulation?
+    # TODO: use beam poly appropriate for RIMEz sim
     omega_p = noise.bm_poly_to_omega_p(freqs_GHz)
     Jy_to_K = noise.jy2T(freqs_GHz, omega_p) / 1000
-    
-    # XXX The xx and yy polarizations are rotated 90 degrees relative to one
-    # another, so does it make sense to use the xx polarization for adding 
-    # noise to the data for both the xx and yy polarizations?
     xx_autos = sim.data.get_data(*antpair, 'xx') * Jy_to_K[None, :]
     xx_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, xx_autos.real)
-
     yy_autos = sim.data.get_data(*antpair, 'yy') * Jy_to_K[None, :]
     yy_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, yy_autos.real)
 
+    # Generate noise for each polarization separately.
     if seed is not None:
         np.random.seed(seed)
     xx_noise = sim.add_noise(
         'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, ret_vis=True, add_vis=False
     )
+    if seed is not None:
+        np.random.seed(seed)
     yy_noise = sim.add_noise(
         'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, ret_vis=True, add_vis=False
     )
+
+    # Make sure each polarization gets the right noise realization.
     noise = np.zeros_like(xx_noise, dtype=np.complex)
-    
+    for ant1, ant2, pol, blt_inds, pol_ind in sim._iterate_antpair_pols():
+        this_noise = xx_noise if pol == 'xx' else yy_noise
+        this_slice = slice(blt_inds, 0, None, pol_ind)
+        noise[this_slice] = this_noise[this_slice]
+    sim.data.data_array += noise
+
     return sim, noise
 
 def add_gains(sim, inplace=True, **gain_params):
