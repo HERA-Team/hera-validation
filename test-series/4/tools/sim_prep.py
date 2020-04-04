@@ -2,7 +2,7 @@ import copy
 import os
 import re
 import numpy as np
-from scipy import interpolate
+from scipy import interpolate, stats
 
 from pyuvdata import UVData
 from pyuvdata.utils import polstr2num
@@ -93,13 +93,13 @@ def add_gains(sim, seed=None, **gain_params):
 
     Returns
     -------
-    gains : dict
-        Dictionary mapping antenna numbers to bandpass gains as a 
-        function of frequency (and potentially time).
-
     corrupted_sim : :class:`pyuvdata.UVData`
         Simulation with bandpass gains applied. Only returned if the 
         gains are applied in-place.
+
+    gains : dict
+        Dictionary mapping antenna numbers to bandpass gains as a 
+        function of frequency (and potentially time).
     """
     # Setup
     sim = _sim_to_uvd(sim, inplace)
@@ -108,6 +108,7 @@ def add_gains(sim, seed=None, **gain_params):
     ants = sim.antenna_numbers
 
     # Simulate and apply the gains
+    # TODO: support time variability
     if seed is not None:
         np.random.seed(seed)
     gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
@@ -115,7 +116,8 @@ def add_gains(sim, seed=None, **gain_params):
 
     return sim, gains
 
-def add_reflections(sim, inplace=True, **reflection_params):
+def add_reflections(sim, seed=None, dly=1200, dly_spread=0, 
+                    amp=1e-3, amp_scale=0):
     """
     Add per-antenna reflection gains to the simulation.
 
@@ -124,28 +126,52 @@ def add_reflections(sim, inplace=True, **reflection_params):
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
 
-    inplace : bool, optional
-        Whether to apply the gains directly to the simulation or to a 
-        copy of the simulation. Default is to apply directly to the 
-        simulation.
+    seed : int, optional
+        The random seed. Not used if not specified.
 
-    **reflection_params
-        The parameters for simulating reflection gains.
+    dly : float, optional
+        Delay at which the reflection appears, in nanoseconds. 
+        Default is 1200 ns.
+
+    dly_spread : float, optional
+        Absolute amount the delays vary between antennas, in ns. 
+        Default is 0 ns.
+
+    amp : float, optional
+        Amplitude of the reflection. Default is 1e-3.
+
+    amp_scale : float, optional
+        Fractional variation in the reflection amplitude between antennas.
+        Default is 1e-4. 
 
     Returns
     -------
-    gains : dict
-        Dictionary mapping antenna numbers to reflection gains as a 
-        function of frequency (and potentially time).
-
     corrupted_sim : :class:`pyuvdata.UVData`
         Simulation with reflection gains applied. Only returned if the 
         gains are applied in-place.
-    """
-    sim = _sim_to_uvd(sim, inplace)
 
-    gains = None # placeholder
-    return gains if inplace else gains, sim
+    gains : dict
+        Dictionary mapping antenna numbers to reflection gains as a 
+        function of frequency (and potentially time).
+    """
+    # Setup
+    sim = _sim_to_uvd(sim, inplace)
+    freqs_GHz = np.unique(sim.freq_array) / 1e9
+    Nants = sim.Nants_data
+    ants = sim.antenna_numbers
+
+    # Randomize parameters in a realistic way.
+    delays_ns = stats.norm.rvs(dly, dly_spread, Nants)
+    phases = stats.uniform.rvs(0, 2*np.pi, Nants)
+    amps = amp * stats.norm.rvs(1, amp_scale, Nants)
+
+    # Simulate and apply the gains.
+    gains = hera_sim.sigchain.gen_reflection_gains(
+        freqs_GHz, ants, amp=amps, dly=delays_ns, phs=phases
+    )
+    apply_gains(sim, gains)
+
+    return sim, gains
 
 def add_xtalk(sim, inplace=True, **xtalk_params):
     """
