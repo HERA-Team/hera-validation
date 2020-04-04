@@ -94,8 +94,7 @@ def add_gains(sim, seed=None, **gain_params):
     Returns
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
-        Simulation with bandpass gains applied. Only returned if the 
-        gains are applied in-place.
+        Simulation with bandpass gains applied. 
 
     gains : dict
         Dictionary mapping antenna numbers to bandpass gains as a 
@@ -147,8 +146,7 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
     Returns
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
-        Simulation with reflection gains applied. Only returned if the 
-        gains are applied in-place.
+        Simulation with reflection gains applied. 
 
     gains : dict
         Dictionary mapping antenna numbers to reflection gains as a 
@@ -173,7 +171,7 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
 
     return sim, gains
 
-def add_xtalk(sim, inplace=True, **xtalk_params):
+def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
     """
     Add cross-coupling crosstalk to the simulation's cross-correlations.
 
@@ -182,27 +180,38 @@ def add_xtalk(sim, inplace=True, **xtalk_params):
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
 
-    inplace : bool, optional
-        Whether to apply the crosstalk directly to the simulation or 
-        to a copy of the simulation. Default is to apply directly to 
-        the simulation.
-
-    **xtalk_params
-        The parameters for simulating crosstalk.
-
     Returns
     -------
-    xtalk_data : :class:`pyuvdata.UVData`
-        Data for the crosstalk visibilities.
-
     corrupted_sim : :class:`pyuvdata.UVData`
-        Simulation with crosstalk applied. Only returned if the 
-        crosstalk is added in-place.
-    """
-    sim = _sim_to_uvd(sim, inplace)
+        Simulation with crosstalk applied.
 
-    xtalk = None # placeholder
-    return xtalk if inplace else xtalk, sim
+    xtalk_vis : np.ndarray
+        Data for the crosstalk visibilities.
+    """
+    # Setup
+    sim = _sim_to_uvd(sim, inplace)
+    freqs_GHz = np.unique(sim.freq_array) / 1e9
+    amps = np.logspace(*amp_range, Ncopies)
+    dlys = np.linspace(*dly_rng, Ncopies)
+    phs = stats.uniform.rvs(0, 2*np.pi, Ncopies)
+
+    xtalk = np.zeros_like(sim.data_array, dtype=np.complex)
+    # XXX should all baselines see the same crosstalk?
+    return sim, xtalk
+
+def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
+    """
+    Generate a series of cross-coupling crosstalk visibilities.
+
+
+    """
+    xtalk = np.zeros_like(autovis, dtype=np.complex)
+    _gen_xtalk = hera_sim.sigchain.gen_cross_coupling_xtalk
+    for amp, dly, phs in zip(xamps, xdlys, xphs):
+        xtalk += _gen_xtalk(freqs, autovis, amp, dly, phs)
+        xtalk += _gen_xtalk(freqs, autovis, amp, -dly, phs)
+                
+    return xtalk
 
 # ------- Functions for preparing files ------- #
 
