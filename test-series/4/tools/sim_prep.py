@@ -15,6 +15,7 @@ if hera_sim.version.version.startswith('0'):
 else:
     from hera_sim.utils import _listify
 
+# ------- Functions for adding systematics ------- #
 
 def add_noise(sim, Trx=100, seed=None):
     """
@@ -73,7 +74,7 @@ def add_noise(sim, Trx=100, seed=None):
 
     return sim, noise
 
-def add_gains(sim, inplace=True, **gain_params):
+def add_gains(sim, seed=None, **gain_params):
     """
     Add per-antenna bandpass gains to the simulation.
 
@@ -100,10 +101,19 @@ def add_gains(sim, inplace=True, **gain_params):
         Simulation with bandpass gains applied. Only returned if the 
         gains are applied in-place.
     """
+    # Setup
     sim = _sim_to_uvd(sim, inplace)
+    freqs = np.unique(sim.freq_array)
+    freqs_GHz = freqs / 1e9
+    ants = sim.antenna_numbers
 
-    gains = None # placeholder
-    return gains if inplace else gains, sim
+    # Simulate and apply the gains
+    if seed is not None:
+        np.random.seed(seed)
+    gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
+    apply_gains(sim, gains)
+
+    return sim, gains
 
 def add_reflections(sim, inplace=True, **reflection_params):
     """
@@ -167,6 +177,8 @@ def add_xtalk(sim, inplace=True, **xtalk_params):
 
     xtalk = None # placeholder
     return xtalk if inplace else xtalk, sim
+
+# ------- Functions for preparing files ------- #
 
 def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=True):
     """
@@ -440,6 +452,19 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
                 print(f"File {save_path} exists; clobbering.")
         this_uvd = sim_uvd.select(times=use_times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
+    return
+
+# ------- Helper Functions ------- #
+
+def apply_gains(sim, gains):
+    """Apply per-antenna gains to a simulation."""
+    for antpairpol in sim.get_antpairpols():
+        blt_inds, _, pol_inds = sim._key2inds(antpairpol)
+        this_slice = slice(blt_inds, 0, None, pol_inds[0])
+        vis = sim.get_data(antpairpol)
+        sim.data_array[this_slice] = hera_sim.sigchain.apply_gains(
+            vis, gains, antpairpol[:2]
+        )
     return
 
 def _sim_to_uvd(sim, inplace):
