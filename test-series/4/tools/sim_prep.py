@@ -83,10 +83,8 @@ def add_gains(sim, seed=None, **gain_params):
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
 
-    inplace : bool, optional
-        Whether to apply the gains directly to the simulation or to a 
-        copy of the simulation. Default is to apply directly to the 
-        simulation.
+    seed : int, optional
+        The random seed. Default is to not seed the RNG.
 
     **gain_params
         The parameters for simulating bandpass gains.
@@ -101,7 +99,7 @@ def add_gains(sim, seed=None, **gain_params):
         function of frequency (and potentially time).
     """
     # Setup
-    sim = _sim_to_uvd(sim, inplace)
+    sim = _sim_to_uvd(sim)
     freqs = np.unique(sim.freq_array)
     freqs_GHz = freqs / 1e9
     ants = sim.antenna_numbers
@@ -153,7 +151,7 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
         function of frequency (and potentially time).
     """
     # Setup
-    sim = _sim_to_uvd(sim, inplace)
+    sim = _sim_to_uvd(sim)
     freqs_GHz = np.unique(sim.freq_array) / 1e9
     Nants = sim.Nants_data
     ants = sim.antenna_numbers
@@ -202,7 +200,7 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
         Data for the crosstalk visibilities.
     """
     # Setup
-    sim = _sim_to_uvd(sim, inplace)
+    sim = _sim_to_uvd(sim)
     freqs_GHz = np.unique(sim.freq_array) / 1e9
     amps = np.logspace(*amp_range, Ncopies)
     dlys = np.linspace(*dly_rng, Ncopies)
@@ -314,7 +312,7 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     sim_uvd.inflate_by_redundancy()
     
     # Find and use the intersection of the RIMEz and H1C arrays.
-    downselect_antennas(sim_uvd, ref_uvd, inplace=True)
+    sim_uvd = downselect_antennas(sim_uvd, ref_uvd)
     
     # Make sure the data is conjugated properly so redcal doesn't break.
     sim_uvd.conjugate_bls('ant1<ant2')
@@ -324,7 +322,7 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     
     return
 
-def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
+def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     """
     Downselect simulated array to match unique baselines from reference.
     
@@ -341,9 +339,6 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
         The maximum allowable discrepancy in antenna position components.
         Default is 1 meter.
         
-    inplace : bool, optional
-        Whether to perform the downselection in-place. Default is True.
-                
     Returns
     -------
     new_sim_uvd : :class:`pyuvdata.UVData`
@@ -352,8 +347,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
         the maximum number of antennas/unique baselines remain in the 
         intersection of the simulation subarray and the reference array. 
         The relevant attributes of the simulation data are updated 
-        accordingly. This is only returned if downselection is not performed 
-        in-place.
+        accordingly.
 
     Notes
     -----
@@ -363,7 +357,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     general case should reduce to this case for an array with appropriate 
     symmetry, as we have for the RIMEz simulation.
     """
-    sim_uvd = _sim_to_uvd(sim_uvd, inplace)
+    sim_uvd = _sim_to_uvd(sim_uvd)
 
     # Find the optimal intersection and get the map between antenna numbers.
     sim_ENU_antpos = _get_antpos(sim_uvd)
@@ -396,8 +390,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0, inplace=True):
     sim_uvd.antenna_positions = new_sim_antpos
     sim_uvd.history += "\nAntennas adjusted to optimally match H1C antennas."
     
-    if not inplace:
-        return sim_uvd
+    return sim_uvd
 
 def rephase_to_reference(sim_uvd, ref_uvd):
     """
@@ -527,9 +520,8 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
 
 # ------- Helper Functions ------- #
 
-def _sim_to_uvd(sim, inplace):
-    """Update simulation object type and possibly return a copy."""
-    sim = sim if inplace else copy.deepcopy(sim)
+def _sim_to_uvd(sim):
+    """Update simulation object type."""
     if isinstance(sim, hera_sim.Simulator):
         sim = sim.data
     return sim
