@@ -180,12 +180,25 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
 
+    Ncopies : int, optional
+        Number of delays at which to generate crosstalk. Default is 
+        to use 10 copies.
+
+    amp_range : tuple of float, optional
+        Base-10 logarithm of the amplitude of the crosstalk at the 
+        first and last delays where crosstalk is injected. Default 
+        is to use -4 and -6.
+
+    dly_rng : tuple of float, optional
+        Minmum and maximum delays, in ns,  at which to inject 
+        crosstalk. Default is 900-1300 ns.
+
     Returns
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
         Simulation with crosstalk applied.
 
-    xtalk_vis : np.ndarray
+    xtalk : np.ndarray
         Data for the crosstalk visibilities.
     """
     # Setup
@@ -193,24 +206,47 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
     freqs_GHz = np.unique(sim.freq_array) / 1e9
     amps = np.logspace(*amp_range, Ncopies)
     dlys = np.linspace(*dly_rng, Ncopies)
-    phs = stats.uniform.rvs(0, 2*np.pi, Ncopies)
 
     xtalk = np.zeros_like(sim.data_array, dtype=np.complex)
-    # XXX should all baselines see the same crosstalk?
+    for antpairpol in sim.get_antpairpols():
+        ai, aj, pol = antpairpol
+        if ai == aj:
+            continue
+        blt_inds, _, pol_inds = sim._key2inds(antpairpol)
+        this_slice = slice(blt_inds, 0, None, pol_inds[0])
+
+        # Add some jitter to the delays and amplitudes.
+        ddlys = stats.norm.rvs(1, 1e-2, Ncopies)
+        damps = stats.norm.rvs(1, 1e-4, Ncopies)
+
+        # Generate random phases and pull the autocorrelation.
+        phs = stats.uniform.rvs(0, 2*np.pi, Ncopies)
+        autovis = sim.get_data(ai, ai, pol)
+        xtalk[this_slice] = gen_xtalk(
+            autovis, freqs_GHz, amps + damps, dlys + ddlys, phs
+        )
+
+    sim.data_array += xtalk
     return sim, xtalk
 
+def apply_gains(sim, gains):
+    """Apply per-antenna gains to a simulation."""
+    for antpairpol in sim.get_antpairpols():
+        blt_inds, _, pol_inds = sim._key2inds(antpairpol)
+        this_slice = slice(blt_inds, 0, None, pol_inds[0])
+        vis = sim.get_data(antpairpol)
+        sim.data_array[this_slice] = hera_sim.sigchain.apply_gains(
+            vis, gains, antpairpol[:2]
+        )
+    return
+
 def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
-    """
-    Generate a series of cross-coupling crosstalk visibilities.
-
-
-    """
+    """Generate a series of cross-coupling crosstalk visibilities."""
     xtalk = np.zeros_like(autovis, dtype=np.complex)
     _gen_xtalk = hera_sim.sigchain.gen_cross_coupling_xtalk
     for amp, dly, phs in zip(xamps, xdlys, xphs):
         xtalk += _gen_xtalk(freqs, autovis, amp, dly, phs)
         xtalk += _gen_xtalk(freqs, autovis, amp, -dly, phs)
-                
     return xtalk
 
 # ------- Functions for preparing files ------- #
@@ -490,17 +526,6 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
     return
 
 # ------- Helper Functions ------- #
-
-def apply_gains(sim, gains):
-    """Apply per-antenna gains to a simulation."""
-    for antpairpol in sim.get_antpairpols():
-        blt_inds, _, pol_inds = sim._key2inds(antpairpol)
-        this_slice = slice(blt_inds, 0, None, pol_inds[0])
-        vis = sim.get_data(antpairpol)
-        sim.data_array[this_slice] = hera_sim.sigchain.apply_gains(
-            vis, gains, antpairpol[:2]
-        )
-    return
 
 def _sim_to_uvd(sim, inplace):
     """Update simulation object type and possibly return a copy."""
