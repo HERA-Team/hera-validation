@@ -4,11 +4,13 @@ import re
 import numpy as np
 from scipy import interpolate, stats
 
+from .data import DATA_PATH
 from pyuvdata import UVData
 from pyuvdata.utils import polstr2num
 from hera_cal.io import to_HERAData
-from hera_cal.utils import lst_rephase
-from hera_sim import noise, Simulator
+from hera_cal.abscal import rephase_vis
+from hera_sim import Simulator
+
 import hera_sim
 if hera_sim.version.version.startswith('0'):
     from hera_sim.rfi import _listify
@@ -44,11 +46,9 @@ def add_noise(sim, Trx=100, seed=None):
 
     # Set up to use the autos to set the noise level
     freqs_GHz = freqs / 1e9  # GHz
-    beam_poly = np.load(
-        os.path.join(__path__[0], "RIMEz_beam_poly.npy")
-    )
+    beam_poly = np.load(os.path.join(DATA_PATH, "RIMEz_beam_poly.npy"))
     omega_p = np.polyval(beam_poly, freqs_GHz)
-    Jy_to_K = noise.jy2T(freqs_GHz, omega_p) / 1000
+    Jy_to_K = hera_sim.noise.jy2T(freqs_GHz, omega_p) / 1000
     xx_autos = sim.data.get_data(*antpair, 'xx') * Jy_to_K[None, :]
     xx_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, xx_autos.real)
     yy_autos = sim.data.get_data(*antpair, 'yy') * Jy_to_K[None, :]
@@ -72,7 +72,7 @@ def add_noise(sim, Trx=100, seed=None):
     noise = np.zeros_like(xx_noise, dtype=np.complex)
     for ant1, ant2, pol, blt_inds, pol_ind in sim._iterate_antpair_pols():
         this_noise = xx_noise if pol == 'xx' else yy_noise
-        this_slice = slice(blt_inds, 0, None, pol_ind)
+        this_slice = (blt_inds, 0, slice(None), pol_ind)
         noise[this_slice] = this_noise[this_slice]
     sim.data.data_array += noise
 
@@ -143,7 +143,7 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
 
     amp_scale : float, optional
         Fractional variation in the reflection amplitude between antennas.
-        Default is 1e-4. 
+        Default is 0. 
 
     Returns
     -------
@@ -215,7 +215,7 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
         if ai == aj:
             continue
         blt_inds, _, pol_inds = sim._key2inds(antpairpol)
-        this_slice = slice(blt_inds, 0, None, pol_inds[0])
+        this_slice = (blt_inds, 0, slice(None), pol_inds[0])
 
         # Add some jitter to the delays and amplitudes.
         ddlys = stats.norm.rvs(1, 1e-2, Ncopies)
@@ -225,7 +225,7 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
         phs = stats.uniform.rvs(0, 2*np.pi, Ncopies)
         autovis = sim.get_data(ai, ai, pol)
         xtalk[this_slice] = gen_xtalk(
-            autovis, freqs_GHz, amps + damps, dlys + ddlys, phs
+            autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
         )
 
     sim.data_array += xtalk
@@ -235,7 +235,7 @@ def apply_gains(sim, gains):
     """Apply per-antenna gains to a simulation."""
     for antpairpol in sim.get_antpairpols():
         blt_inds, _, pol_inds = sim._key2inds(antpairpol)
-        this_slice = slice(blt_inds, 0, None, pol_inds[0])
+        this_slice = (blt_inds, 0, slice(None), pol_inds[0])
         vis = sim.get_data(antpairpol)
         sim.data_array[this_slice] = hera_sim.sigchain.apply_gains(
             vis, gains, antpairpol[:2]
@@ -363,35 +363,34 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     """
     sim_uvd = _sim_to_uvd(sim_uvd)
 
-    # Find the optimal intersection and get the map between antenna numbers.
+    # Find the optimal intersection, get the map between antennas, and downselect the data.
     sim_ENU_antpos = _get_antpos(sim_uvd)
     ref_ENU_antpos = _get_antpos(ref_uvd)
     array_intersection = _get_array_intersection(sim_ENU_antpos, ref_ENU_antpos, tol)
     sim_to_ref_ant_map = _get_antenna_map(array_intersection, ref_ENU_antpos, tol)
+    sim_uvd.select(antenna_nums=list(sim_to_ref_ant_map.keys()), keep_all_metadata=False)
+    ref_uvd.select(antenna_nums=list(sim_to_ref_ant_map.values()), keep_all_metadata=False)
     
-    # Perform a downselection and update the relevant metadata accordingly.
-    sim_uvd.select(antenna_nums=list(array_intersection.keys()), keep_all_metadata=False)
-    ref_antpos = _get_antpos(ref_uvd, ENU=False)
-    sim_antpos = sim_uvd.antenna_positions
-    sim_ants = sim_uvd.antenna_numbers
-    
-    # Prepare new metadata attributes.
-    new_sim_ants = np.empty_like(sim_ants)
-    new_sim_antpos = np.empty_like(sim_antpos)
-    new_ant_1_array = np.empty_like(sim_uvd.ant_1_array)
-    new_ant_2_array = np.empty_like(sim_uvd.ant_2_array)
-    for sim_ant, ref_ant in sim_to_ref_ant_map.items():
-        new_ant_1_array[sim_uvd.ant_1_array == sim_ant] = ref_ant
-        new_ant_2_array[sim_uvd.ant_2_array == sim_ant] = ref_ant
-        sim_ant_index = sim_ants.tolist().index(sim_ant)
-        new_sim_ants[sim_ant_index] = ref_ant
-        new_sim_antpos[sim_ant_index] = ref_antpos[ref_ant]
+    # Prepare the new data array.
+    new_sim_data = np.zeros_like(sim_uvd.data_array, dtype=np.complex)
+    for antpairpol in sim_uvd.get_antpairpols():
+        ai, aj, pol = antpairpol
+        ref_antpairpol = (sim_to_ref_ant_map[ai], sim_to_ref_ant_map[aj], pol)
+        blts, conj_blts, pol_inds = ref_uvd._key2inds(ref_antpairpol)
+        sim_data = sim_uvd.get_data(antpairpol)
+        if len(blts) > 0:
+            this_slice = (blts, 0, slice(None), pol_inds[0])
+        else:
+            this_slice = (conj_blts, 0, slice(None), pol_inds[1])
+            sim_data = sim_data.conj()
+        new_sim_data[this_slice] = sim_data
         
-    # Actually update the metadata.
-    sim_uvd.ant_1_array = new_ant_1_array
-    sim_uvd.ant_2_array = new_ant_2_array
-    sim_uvd.antenna_numbers = new_sim_ants
-    sim_uvd.antenna_positions = new_sim_antpos
+    # Actually update the data and metadata.
+    sim_uvd.ant_1_array = ref_uvd.ant_1_array
+    sim_uvd.ant_2_array = ref_uvd.ant_2_array
+    sim_uvd.antenna_numbers = ref_uvd.antenna_numbers
+    sim_uvd.antenna_positions = ref_uvd.antenna_positions
+    sim_uvd.data_array = new_sim_data
     sim_uvd.history += "\nAntennas adjusted to optimally match H1C antennas."
     
     return sim_uvd
@@ -437,7 +436,8 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     lst_slice = slice(start_ind, start_ind + ref_uvd.Ntimes)
     use_times = sim_times[lst_slice]
     use_lsts = sim_lsts[lst_slice]
-    dlst = ref_lsts - use_lsts
+    use_lsts[use_lsts < use_lsts[0]] += 2 * np.pi
+    ref_lsts[ref_lsts < ref_lsts[0]] += 2 * np.pi
 
     # Downselect in time and load data.
     sim_uvd.select(times=use_times)
@@ -453,8 +453,10 @@ def rephase_to_reference(sim_uvd, ref_uvd):
         bls[bl] = antpos[j] - antpos[i]
 
     # Rephase and update the data.
-    lst_rephase(data, bls, hd_metas['freqs'], dlst)
-    sim_uvd.update(data=data)
+    new_data, new_flags = rephase_vis(
+        data, use_lsts, ref_lsts, bls, hd_metas['freqs']
+    )
+    sim_uvd.update(data=new_data, flags=new_flags)
     new_sim_lsts = np.zeros_like(sim_uvd.lst_array)
     new_sim_times = np.zeros_like(sim_uvd.time_array)
     for use_time, ref_time, ref_lst in zip(use_times, ref_times, ref_lsts):
@@ -509,15 +511,9 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         start = Nfile * integrations_per_file
         stop = start + integrations_per_file
         use_times = times[start:stop]
-        jd_minor = str(times[start] - jd_major)[2:7]
+        jd_minor = str(use_times[0]).split('.')[1][:5]
         filename = f"zen.{jd_major}.{jd_minor}.{sky_cmp}.uvh5"
         save_path = os.path.join(save_dir, filename)
-        if os.path.exists(save_path):
-            if not clobber:
-                print(f"File {save_path} exists; skipping.")
-                continue
-            if clobber:
-                print(f"File {save_path} exists; clobbering.")
         this_uvd = sim_uvd.select(times=use_times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
     return
