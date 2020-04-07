@@ -581,9 +581,7 @@ def _get_optimal_translation(sim_antpos, ref_antpos, tol=1.0):
     # Choose the translation that has the most antennas in the intersection.
     sim_to_ref_keys = list(translations.keys())
     intersections_per_translation = np.array(list(intersection_sizes.values()))
-    index = np.argwhere(
-        intersections_per_translation == intersections_per_translation.max()
-    ).flatten()[0]
+    index = np.argmax(intersections_per_translation)
     return translations[sim_to_ref_keys[index]]
 
 def _build_translations(sim_antpos, ref_antpos, tol=1.0):
