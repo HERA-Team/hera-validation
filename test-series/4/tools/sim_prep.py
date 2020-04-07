@@ -44,8 +44,10 @@ def add_noise(sim, Trx=100, seed=None):
 
     # Set up to use the autos to set the noise level
     freqs_GHz = freqs / 1e9  # GHz
-    # TODO: use beam poly appropriate for RIMEz sim
-    omega_p = noise.bm_poly_to_omega_p(freqs_GHz)
+    beam_poly = np.load(
+        os.path.join(__path__[0], "RIMEz_beam_poly.npy")
+    )
+    omega_p = np.polyval(beam_poly, freqs_GHz)
     Jy_to_K = noise.jy2T(freqs_GHz, omega_p) / 1000
     xx_autos = sim.data.get_data(*antpair, 'xx') * Jy_to_K[None, :]
     xx_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, xx_autos.real)
@@ -56,12 +58,14 @@ def add_noise(sim, Trx=100, seed=None):
     if seed is not None:
         np.random.seed(seed)
     xx_noise = sim.add_noise(
-        'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, ret_vis=True, add_vis=False
+        'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
+        ret_vis=True, add_vis=False
     )
     if seed is not None:
         np.random.seed(seed)
     yy_noise = sim.add_noise(
-        'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, ret_vis=True, add_vis=False
+        'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
+        ret_vis=True, add_vis=False
     )
 
     # Make sure each polarization gets the right noise realization.
