@@ -8,7 +8,7 @@ from .data import DATA_PATH
 from pyuvdata import UVData
 from pyuvdata.utils import polstr2num
 from hera_cal.io import to_HERAData
-from hera_cal.abscal import rephase_vis
+from hera_cal.abscal import rephase_vis, get_d2m_time_map
 from hera_sim import Simulator
 
 import hera_sim
@@ -55,25 +55,23 @@ def add_noise(sim, Trx=100, seed=None):
     yy_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, yy_autos.real)
 
     # Generate noise for each polarization separately.
+    blts, _, xx_pol_ind = sim.data._key2inds('xx')
+    _, _, yy_pol_ind = sim.data._key2inds('yy')
+    xx_slice = (blts, 0, slice(None), xx_pol_ind[0])
+    yy_slice = (blts, 0, slice(None), yy_pol_ind[0])
+    noise = np.zeros_like(sim.data.data_array, dtype=np.complex)
     if seed is not None:
         np.random.seed(seed)
-    xx_noise = sim.add_noise(
+    noise[xx_slice] += sim.add_noise(
         'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
         ret_vis=True, add_vis=False
-    )
+    )[xx_slice]
     if seed is not None:
         np.random.seed(seed)
-    yy_noise = sim.add_noise(
+    noise[yy_slice] += sim.add_noise(
         'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
         ret_vis=True, add_vis=False
-    )
-
-    # Make sure each polarization gets the right noise realization.
-    noise = np.zeros_like(xx_noise, dtype=np.complex)
-    for ant1, ant2, pol, blt_inds, pol_ind in sim._iterate_antpair_pols():
-        this_noise = xx_noise if pol == 'xx' else yy_noise
-        this_slice = (blt_inds, 0, slice(None), pol_ind)
-        noise[this_slice] = this_noise[this_slice]
+    )[yy_slice]
     sim.data.data_array += noise
 
     return sim, noise
@@ -322,7 +320,7 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     sim_uvd.conjugate_bls('ant1<ant2')
     
     # Chunk the simulation data and write to disk.
-    chunk_sim_and_save(sim_uvd, data_files[0], save_dir, sky_cmp, clobber)
+    chunk_sim_and_save(sim_uvd, data_files, save_dir, sky_cmp, clobber)
     
     return
 
@@ -390,6 +388,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     sim_uvd.ant_2_array = ref_uvd.ant_2_array
     sim_uvd.antenna_numbers = ref_uvd.antenna_numbers
     sim_uvd.antenna_positions = ref_uvd.antenna_positions
+    sim_uvd.telescope_location = ref_uvd.telescope_location
     sim_uvd.data_array = new_sim_data
     sim_uvd.history += "\nAntennas adjusted to optimally match H1C antennas."
     
@@ -429,15 +428,19 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     sim_times = hd_metas['times']
     ref_lsts = np.unique(ref_uvd.lst_array)
     ref_times = np.unique(ref_uvd.time_array)
-    
-    # Find out which times to use and how much to rephase in LST.
-    start_lst = ref_lsts[0]
-    start_ind = np.argmin(np.abs(sim_lsts - start_lst))
-    lst_slice = slice(start_ind, start_ind + ref_uvd.Ntimes)
-    use_times = sim_times[lst_slice]
-    use_lsts = sim_lsts[lst_slice]
-    use_lsts[use_lsts < use_lsts[0]] += 2 * np.pi
-    ref_lsts[ref_lsts < ref_lsts[0]] += 2 * np.pi
+    sim_to_ref_time_map = get_d2m_time_map(sim_times, sim_lsts, ref_times, ref_lsts)
+    use_times = np.array([
+        sim_time for sim_time, ref_time in sim_to_ref_time_map.items()
+        if ref_time is not None
+    ])
+    use_lsts = np.array(
+        [sim_lsts[np.argmin(np.abs(sim_times - time))] for time in use_times]
+    )
+    ref_lsts = np.array([
+        ref_lsts[np.argmin(np.abs(ref_times - sim_to_ref_time_map[sim_time]))] 
+        for sim_time in use_times
+    ])
+    ref_times = np.array([sim_to_ref_time_map[sim_time] for sim_time in use_times])
 
     # Downselect in time and load data.
     sim_uvd.select(times=use_times)
@@ -446,10 +449,9 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     # Build the antpair -> ENU baseline vector dictionary.
     antpos, ants = sim_uvd.get_ENU_antpos()
     bls = {bl : None for bl in data.bls()}
-    ants = list(ants)
     for bl in bls:
         ai, aj = bl[:2]
-        i, j = ants.index(ai), ants.index(aj)
+        i, j = ants.tolist().index(ai), ants.tolist().index(aj)
         bls[bl] = antpos[j] - antpos[i]
 
     # Rephase and update the data.
@@ -472,7 +474,7 @@ def rephase_to_reference(sim_uvd, ref_uvd):
         setattr(return_uvd, _property, getattr(sim_uvd, _property))
     return return_uvd
 
-def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
+def chunk_sim_and_save(sim_uvd, ref_files, save_dir, sky_cmp, clobber=True):
     """
     Chunk the simulation data to match the reference file and write to disk.
     
@@ -482,10 +484,8 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         :class:`pyuvdata.UVData` object containing the simulation data 
         to chunk and write to disk.
         
-    ref_file : str
-        Path to a file to use for reference when chunking. It is assumed 
-        that all files for the same JD have the same number of 
-        integrations as the reference file.
+    ref_files : iterable of str
+        Iterable of filepaths to use for reference when chunking.
         
     save_dir : str or path-like object
         Path to the directory where the chunked files will be saved.
@@ -498,23 +498,17 @@ def chunk_sim_and_save(sim_uvd, ref_file, save_dir, sky_cmp, clobber=True):
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
-    # Get some useful metadata.
-    uvd = UVData()
-    uvd.read(ref_file, read_data=False)
-    integrations_per_file = uvd.Ntimes
-    times = np.unique(sim_uvd.time_array)
-    jd_major = int(np.floor(times[0]))
-    Nfiles = int(times.size / integrations_per_file)
-    
-    # Actually chunk the data and write to disk.
-    for Nfile in range(Nfiles):
-        start = Nfile * integrations_per_file
-        stop = start + integrations_per_file
-        use_times = times[start:stop]
-        jd_minor = str(use_times[0]).split('.')[1][:5]
+    jd_major_re = re.compile("\.[0-9]{7}\.")
+    jd_minor_re = re.compile("\.[0-9]{5}\.")
+    for ref_file in ref_files:
+        uvd = UVData()
+        uvd.read(ref_file, read_data=False)
+        times = np.unique(uvd.time_array)
+        jd_major = jd_major_re.findall(ref_file)[0][1:-1]
+        jd_minor = jd_minor_re.findall(ref_file)[0][1:-1]
         filename = f"zen.{jd_major}.{jd_minor}.{sky_cmp}.uvh5"
         save_path = os.path.join(save_dir, filename)
-        this_uvd = sim_uvd.select(times=use_times, inplace=False)
+        this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
     return
 
