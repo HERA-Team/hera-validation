@@ -299,6 +299,7 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
 
     # Don't do anything if the files already exist and clobber is False.
     if not clobber and _sim_files_exist(data_files, save_dir, sky_cmp):
+        print("Simulation files exist and clobber set to False; returning.")
         return
 
     # Ensure the data files are a list and load in their metadata.
