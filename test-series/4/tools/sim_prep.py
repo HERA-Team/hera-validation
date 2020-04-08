@@ -294,13 +294,17 @@ def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=Tru
     integrations as the observation files (assuming a uniform number of integration 
     per file) and written to disk. 
     """
+    # Get the sky component if not specified.
+    sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
+
+    # Don't do anything if the files already exist and clobber is False.
+    if not clobber and _sim_files_exist(data_files, save_dir, sky_cmp):
+        return
+
     # Ensure the data files are a list and load in their metadata.
     data_files = _listify(data_files)
     ref_uvd = UVData()
     ref_uvd.read(data_files, read_data=False)
-    
-    # Get the sky component if not specified.
-    sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
     
     # Load in the simulation data, but only the linear vispols.
     use_pols = [polstr2num(pol) for pol in ('xx', 'yy')]
@@ -608,3 +612,14 @@ def _parse_filename_for_cmp(filename):
             f"Simulation component could not be inferred from {filename}."
         )
     return sky_cmp[0][:-5]
+
+def _sim_files_exist(data_files, save_dir, sky_cmp):
+    """Check if the chunked simulation files already exist."""
+    file_ext = os.path.splitext(data_files[0])[1]
+    data_file_names = [os.path.split(dfile)[1] for dfile in data_files]
+    sim_file_names = [
+        os.path.join(
+            save_dir, data_file.replace(file_ext, f"{sky_cmp}" + file_ext)
+        )
+    ]
+    return all([os.path.exists(sim_file) for sim_file in sim_file_names])
