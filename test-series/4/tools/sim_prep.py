@@ -40,9 +40,7 @@ def add_noise(sim, Trx=100, seed=None):
 
     # Find out which antenna has the autocorrelation data, in case we
     # add noise before inflating.
-    antpair = list(
-        [ants for ants in sim.data.get_antpairs() if ants[0] == ants[1]]
-    )[0]
+    antpair = next(ants for ants in sim.data.get_antpairs() if ants[0] == ants[1])
 
     # Set up to use the autos to set the noise level
     freqs_GHz = freqs / 1e9  # GHz
