@@ -602,14 +602,10 @@ def _build_translations(sim_antpos, ref_antpos, tol=1.0):
     }
     unique_translations = {}
     for key, translation in translations.items():
-        if not unique_translations:
-            unique_translations[key] = translation
-            continue
-        keep_translation = not any(
+        if not any(
             [np.allclose(translation, unique_translation, atol=tol)
              for unique_translation in unique_translations.values()]
-        )
-        if keep_translation:
+        ):
             unique_translations[key] = translation
     return unique_translations
 
