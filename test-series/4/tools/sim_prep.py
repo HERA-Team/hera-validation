@@ -381,6 +381,9 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
         ref_antpairpol = (sim_to_ref_ant_map[ai], sim_to_ref_ant_map[aj], pol)
         blts, conj_blts, pol_inds = ref_uvd._key2inds(ref_antpairpol)
         sim_data = sim_uvd.get_data(antpairpol)
+        # Correctly choose which slice to use depending on whether the 
+        # reference baseline corresponding to (ai, aj) is conjugated.
+        # (If it's conjugated in the reference, then blts is empty.)
         if len(blts) > 0:
             this_slice = (blts, 0, slice(None), pol_inds[0])
         else:
