@@ -577,13 +577,12 @@ def _get_optimal_translation(sim_antpos, ref_antpos, tol=1.0):
         new_sim_antpos = {
             ant : pos + translation for ant, pos in sim_antpos.items()
         }
-        Nintersections = 0
-        for pos in new_sim_antpos.values():
-            pos_in_ref = any(
-                [np.allclose(pos, ref_pos, atol=tol)
-                 for ref_pos in ref_antpos.values()]
+        Nintersections = sum(
+            any(np.allclose(pos, ref_pos, atol=tol) 
+                for ref_pos in ref_antpos.values()
             )
-            Nintersections += pos_in_ref
+            for pos in new_sim_antpos.values()
+        )
         intersection_sizes[sim_ant_to_ref_ant] = Nintersections
         
     # Choose the translation that has the most antennas in the intersection.
