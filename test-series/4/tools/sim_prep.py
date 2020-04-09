@@ -520,7 +520,7 @@ def chunk_sim_and_save(sim_uvd, ref_files, save_dir, sky_cmp, clobber=True):
         uvd.read(ref_file, read_data=False)
         times = np.unique(uvd.time_array)
         jd = re.search(jd_pattern, ref_file).groupdict()
-        filename = f"zen.{jd['major']}.{jd['minor']}.{sky_cmp}.uvh5"
+        filename = f"zen.{jd['major']}.{jd['minor']}.{sky_cmp}.true.uvh5"
         save_path = os.path.join(save_dir, filename)
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
