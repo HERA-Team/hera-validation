@@ -514,15 +514,13 @@ def chunk_sim_and_save(sim_uvd, ref_files, save_dir, sky_cmp, clobber=True):
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
-    jd_major_re = re.compile("\.[0-9]{7}\.")
-    jd_minor_re = re.compile("\.[0-9]{5}\.")
+    jd_pattern = re.compile(r"\.(?P<major>[0-9]{7})\.(?P<minor>[0-9]{5}).")
     for ref_file in ref_files:
         uvd = UVData()
         uvd.read(ref_file, read_data=False)
         times = np.unique(uvd.time_array)
-        jd_major = jd_major_re.findall(ref_file)[0][1:-1]
-        jd_minor = jd_minor_re.findall(ref_file)[0][1:-1]
-        filename = f"zen.{jd_major}.{jd_minor}.{sky_cmp}.uvh5"
+        jd = re.search(jd_pattern, ref_file).groupdict()
+        filename = f"zen.{jd['major']}.{jd['minor']}.{sky_cmp}.uvh5"
         save_path = os.path.join(save_dir, filename)
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
