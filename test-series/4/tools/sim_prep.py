@@ -374,6 +374,8 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     
     # Prepare the new data array.
     new_sim_data = np.zeros_like(sim_uvd.data_array, dtype=np.complex)
+    new_sim_flags = np.zeros_like(sim_uvd.flag_array, dtype=np.bool)
+    new_sim_nsamples = np.zeros_like(sim_uvd.nsample_array, dtype=np.float)
     for antpairpol in sim_uvd.get_antpairpols():
         ai, aj, pol = antpairpol
         ref_antpairpol = (sim_to_ref_ant_map[ai], sim_to_ref_ant_map[aj], pol)
@@ -388,14 +390,22 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
             this_slice = (conj_blts, 0, slice(None), pol_inds[1])
             sim_data = sim_data.conj()
         new_sim_data[this_slice] = sim_data
+        new_sim_flags[this_slice] = sim_uvd.get_flags(antpairpol)
+        new_sim_nsamples[this_slice] = sim_uvd.get_nsamples(antpairpol)
         
-    # Actually update the data and metadata.
+    # Update the data-like parameters.
+    sim_uvd.data_array = new_sim_data
+    sim_uvd.flag_array = new_sim_flags
+    sim_uvd.nsample_array = new_sim_nsamples
+
+    # Update the antenna-related simulation metadata to reflect the changes 
+    # made to the data array; this ensures that the data-like parameters
+    # will be accessed correctly.
     sim_uvd.ant_1_array = ref_uvd.ant_1_array
     sim_uvd.ant_2_array = ref_uvd.ant_2_array
     sim_uvd.antenna_numbers = ref_uvd.antenna_numbers
     sim_uvd.antenna_positions = ref_uvd.antenna_positions
     sim_uvd.telescope_location = ref_uvd.telescope_location
-    sim_uvd.data_array = new_sim_data
     sim_uvd.history += "\nAntennas adjusted to optimally match H1C antennas."
     
     return sim_uvd
