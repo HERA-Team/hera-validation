@@ -540,7 +540,7 @@ def _get_array_intersection(sim_antpos, ref_antpos, tol=1.0):
     new_antpos = {ant : pos + optimal_translation for ant, pos in sim_antpos.items()}
     intersection = {
         ant : pos for ant, pos in new_antpos.items()
-        if any([np.allclose(pos, ref_pos, atol=tol) for ref_pos in ref_antpos.values()])
+        if any(np.allclose(pos, ref_pos, atol=tol) for ref_pos in ref_antpos.values())
     }
     return intersection
 
@@ -602,8 +602,8 @@ def _build_translations(sim_antpos, ref_antpos, tol=1.0):
     unique_translations = {}
     for key, translation in translations.items():
         if not any(
-            [np.allclose(translation, unique_translation, atol=tol)
-             for unique_translation in unique_translations.values()]
+            np.allclose(translation, unique_translation, atol=tol)
+            for unique_translation in unique_translations.values()
         ):
             unique_translations[key] = translation
     return unique_translations
@@ -627,4 +627,4 @@ def _sim_files_exist(data_files, save_dir, sky_cmp):
             save_dir, data_file.replace(file_ext, f"{sky_cmp}" + file_ext)
         )
     ]
-    return all([os.path.exists(sim_file) for sim_file in sim_file_names])
+    return all(os.path.exists(sim_file) for sim_file in sim_file_names)
