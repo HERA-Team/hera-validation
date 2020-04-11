@@ -622,9 +622,16 @@ def _sim_files_exist(data_files, save_dir, sky_cmp):
     """Check if the chunked simulation files already exist."""
     file_ext = os.path.splitext(data_files[0])[1]
     data_file_names = [os.path.split(dfile)[1] for dfile in data_files]
-    sim_file_names = [
-        os.path.join(
-            save_dir, data_file.replace(file_ext, f"{sky_cmp}" + file_ext)
-        )
+    sim_file_names = [data_file.replace("HH", f"{sky_cmp}") for data_file in data_file_names]
+    if all(
+        sim_file == data_file for sim_file, data_file in zip(sim_file_names, data_file_names)
+    ):
+        sim_file_names = [
+            sim_file.replace(file_ext, f".{sky_cmp}" + file_ext)
+            for sim_file in sim_file_names
+        ]
+    sim_files = [
+        os.path.join(save_dir, sim_file.replace(file_ext, ".true" + file_ext))
+        for sim_file in sim_file_names
     ]
-    return all(os.path.exists(sim_file) for sim_file in sim_file_names)
+    return all(os.path.exists(sim_file) for sim_file in sim_files)
