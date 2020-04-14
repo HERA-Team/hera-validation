@@ -145,6 +145,13 @@ def add_gains(
             envelope = stats.norm.rvs(1, vary_amp, times.size)
         else:
             raise ValueError("Time variation method not supported.")
+        if not np.allclose(envelope, np.clip(envelope, 0, 2)):
+            warnings.warn(
+                "Gains vary in time by an amount more than their time-"
+                "independent values. Clipping time-variation envelope."
+                "Check your parameters if this is unexpected."
+            )
+            envelope = np.clip(envelope, 0, 2)
         envelope = np.outer(envelope, np.ones(freqs.size))
         gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
     # TODO: add support for phase variation?
