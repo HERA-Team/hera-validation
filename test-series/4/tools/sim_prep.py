@@ -74,7 +74,15 @@ def add_noise(sim, Trx=100, seed=None):
 
     return sim, noise
 
-def add_gains(sim, seed=None, **gain_params):
+def add_gains(
+    sim, 
+    seed=None, 
+    ref_time=None,
+    timescale=None, 
+    time_variation='linear', 
+    vary_amp=0,
+    **gain_params
+    ):
     """
     Add per-antenna bandpass gains to the simulation.
 
@@ -85,6 +93,23 @@ def add_gains(sim, seed=None, **gain_params):
 
     seed : int, optional
         The random seed. Default is to not seed the RNG.
+
+    ref_time : float, optional
+        Reference time where gains will be equal to their value before 
+        adding time variability. Gains are constant in time if not 
+        specified. 
+
+    timescale : float, optional
+        Characteristic timescale for adding time variability. Should 
+        be given in JD. Gains are constant in time if not specified.
+
+    time_variation : str, optional
+        How to make the gains vary in time. Options are linear, 
+        sinusoidal, and noiselike. Default is linear.
+
+    vary_amp : float, optional
+        How much the gains are allowed to vary in time; should be 
+        between 0 and 1. Default is zero.
 
     **gain_params
         The parameters for simulating bandpass gains.
@@ -102,13 +127,27 @@ def add_gains(sim, seed=None, **gain_params):
     sim = _sim_to_uvd(sim)
     freqs = np.unique(sim.freq_array)
     freqs_GHz = freqs / 1e9
+    times = np.unique(sim.time_array)
     ants = sim.antenna_numbers
 
     # Simulate and apply the gains
-    # TODO: support time variability
     if seed is not None:
         np.random.seed(seed)
     gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
+    # Support amplitude time variation.
+    if timescale is not None and ref_time is not None:
+        phases = (times - ref_time) / timescale
+        if time_variation == 'linear':
+            envelope = 1 + vary_amp * phases
+        elif time_variation == 'sinusoidal':
+            envelope = 1 + np.sin(2 * np.pi * phases)
+        elif time_variation == 'noiselike':
+            envelope = stats.norm.rvs(1, vary_amp, times.size)
+        else:
+            raise ValueError("Time variation method not supported.")
+        envelope = np.outer(envelope, np.ones(freqs.size))
+        gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
+    # TODO: add support for phase variation?
     apply_gains(sim, gains)
 
     return sim, gains
