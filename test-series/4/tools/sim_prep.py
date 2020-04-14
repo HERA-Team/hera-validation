@@ -252,9 +252,38 @@ def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
         xtalk += _gen_xtalk(freqs, autovis, amp, -dly, phs)
     return xtalk
 
+def apply_systematics(
+    sim, 
+    seed=None,
+    noise_params=None, 
+    gain_params=None, 
+    reflection_params=None,
+    xtalk_params=None
+    ):
+    """One-stop shop for applying systematics to a simulation.
+
+    # TODO: docstring
+    """
+    noise_params = noise_params or {'seed' : seed}
+    gain_params = gain_params or {'seed' : seed}
+    reflection_params = reflection_params or {'seed' : seed}
+    xtalk_params = xtalk_params or {'seed' : seed}
+    sim = _sim_to_uvd(sim)
+    sim, noise = add_noise(sim, **noise_params)
+    sim, gains = add_gains(sim, **gain_params)
+    sim, reflections = add_reflections(sim, **reflection_params)
+    sim, xtalk = add_xtalk(sim, **xtalk_params)
+    systematics = {
+        'noise' : noise,
+        'gains' : gains,
+        'reflections' : reflections,
+        'xtalk' : xtalk
+    }
+    return sim, systematics
+
 # ------- Functions for preparing files ------- #
 
-def adjust_sim_to_data(sim_file, data_files, save_dir, sky_cmp=None, clobber=True):
+def prepare_sim_files(sim_file, data_files, save_dir, sky_cmp=None, clobber=True):
     """
     Modify simulated data to be consistent with an observation's metadata.
     
@@ -537,6 +566,10 @@ def _sim_to_uvd(sim):
     """Update simulation object type."""
     if isinstance(sim, hera_sim.Simulator):
         sim = sim.data
+    elif isinstance(sim, str):
+        sim_ = UVData()
+        sim_.read(sim)
+        sim = sim_
     return sim
 
 def _get_array_intersection(sim_antpos, ref_antpos, tol=1.0):
