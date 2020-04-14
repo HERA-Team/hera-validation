@@ -3,6 +3,7 @@ import os
 import re
 import numpy as np
 from scipy import interpolate, stats
+from warnings import warn
 
 from .data import DATA_PATH
 from pyuvdata import UVData
@@ -79,8 +80,8 @@ def add_gains(
     seed=None, 
     ref_time=None,
     timescale=None, 
-    time_variation='linear', 
     vary_amp=0,
+    variation_mode='linear', 
     **gain_params
     ):
     """
@@ -103,13 +104,13 @@ def add_gains(
         Characteristic timescale for adding time variability. Should 
         be given in JD. Gains are constant in time if not specified.
 
-    time_variation : str, optional
-        How to make the gains vary in time. Options are linear, 
-        sinusoidal, and noiselike. Default is linear.
-
     vary_amp : float, optional
         How much the gains are allowed to vary in time; should be 
         between 0 and 1. Default is zero.
+
+    variation_mode : str, optional
+        How to make the gains vary in time. Options are linear, 
+        sinusoidal, and noiselike. Default is linear.
 
     **gain_params
         The parameters for simulating bandpass gains.
@@ -136,25 +137,9 @@ def add_gains(
     gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
     # Support amplitude time variation.
     if timescale is not None and ref_time is not None:
-        phases = (times - ref_time) / timescale
-        if time_variation == 'linear':
-            envelope = 1 + vary_amp * phases
-        elif time_variation == 'sinusoidal':
-            envelope = 1 + np.sin(2 * np.pi * phases)
-        elif time_variation == 'noiselike':
-            envelope = stats.norm.rvs(1, vary_amp, times.size)
-        else:
-            raise ValueError("Time variation method not supported.")
-        if not np.allclose(envelope, np.clip(envelope, 0, 2)):
-            warnings.warn(
-                "Gains vary in time by an amount more than their time-"
-                "independent values. Clipping time-variation envelope."
-                "Check your parameters if this is unexpected."
-            )
-            envelope = np.clip(envelope, 0, 2)
-        envelope = np.outer(envelope, np.ones(freqs.size))
-        gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
-    # TODO: add support for phase variation?
+        gains = vary_gain_amps(
+            gains, times, ref_time, timescale, vary_amp, variation_mode
+        )
     apply_gains(sim, gains)
 
     return sim, gains
@@ -288,6 +273,42 @@ def apply_gains(sim, gains):
             vis, gains, antpairpol[:2]
         )
     return
+
+def vary_gain_amps(
+    gains, 
+    times, 
+    ref_time, 
+    timescale,
+    vary_amp=0,
+    variation_mode='linear'
+    ):
+    """Vary gains in time."""
+    gain_shape = list(gains.values())[0].shape
+    phases = (times - ref_time) / timescale
+    if variation_mode == 'linear':
+        envelope = 1 + vary_amp * phases
+    elif variation_mode == 'sinusoidal':
+        envelope = 1 + np.sin(2 * np.pi * phases)
+    elif variation_mode == 'noiselike':
+        envelope = stats.norm.rvs(1, vary_amp, times.size)
+    else:
+        warn("Time variation method not supported; returning.")
+        return gains
+    if not np.allclose(envelope, np.clip(envelope, 0, 2)):
+        warn(
+            "Gains vary in time by an amount more than their time-"
+            "independent values. Clipping time-variation envelope."
+            "Check your parameters if this is unexpected."
+        )
+        envelope = np.clip(envelope, 0, 2)
+    envelope = np.outer(envelope, np.ones(gain_shape[-1]))
+    # XXX can refactor this; might be worth doing if adding option to
+    # make time-dependent phases as well
+    if len(gain_shape) == 1:
+        gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
+    else:
+        gains = {ant : gain * envelope for ant, gain in gains.items()}
+    return gains
 
 def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
     """Generate a series of cross-coupling crosstalk visibilities."""
