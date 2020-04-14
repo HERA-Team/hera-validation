@@ -169,7 +169,7 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
 
     return sim, gains
 
-def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
+def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
     """
     Add cross-coupling crosstalk to the simulation's cross-correlations.
 
@@ -177,6 +177,9 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
     ----------
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
+
+    seed : int, optional
+        The random seed. Not used if not specified.
 
     Ncopies : int, optional
         Number of delays at which to generate crosstalk. Default is 
@@ -206,6 +209,8 @@ def add_xtalk(sim, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
     dlys = np.linspace(*dly_rng, Ncopies)
 
     xtalk = np.zeros_like(sim.data_array, dtype=np.complex)
+    if seed is not None:
+        np.random.seed(seed)
     for antpairpol in sim.get_antpairpols():
         ai, aj, pol = antpairpol
         if ai == aj:
