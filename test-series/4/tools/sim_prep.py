@@ -78,6 +78,7 @@ def add_noise(sim, Trx=100, seed=None):
 def add_gains(
     sim, 
     seed=None, 
+    time_vary_params=None,
     ref_time=None,
     timescale=None, 
     vary_amp=0,
@@ -95,22 +96,12 @@ def add_gains(
     seed : int, optional
         The random seed. Default is to not seed the RNG.
 
-    ref_time : float, optional
-        Reference time where gains will be equal to their value before 
-        adding time variability. Gains are constant in time if not 
-        specified. 
-
-    timescale : float, optional
-        Characteristic timescale for adding time variability. Should 
-        be given in JD. Gains are constant in time if not specified.
-
-    vary_amp : float, optional
-        How much the gains are allowed to vary in time; should be 
-        between 0 and 1. Default is zero.
-
-    variation_mode : str, optional
-        How to make the gains vary in time. Options are linear, 
-        sinusoidal, and noiselike. Default is linear.
+    time_vary_params : dict, optional
+        Parameters for adding time variation to the gains. Keys should 
+        be any of ('amp', 'amplitude', 'phs', 'phase'). Values should 
+        be the set of variation parameters (parameters prefixed by 
+        'variation' in the ``vary_gains_in_time`` function) to be used.
+        Default behavior is to leave the gains constant in time.
 
     **gain_params
         The parameters for simulating bandpass gains.
@@ -126,26 +117,19 @@ def add_gains(
     """
     # Setup
     sim = _sim_to_uvd(sim)
-    freqs = np.unique(sim.freq_array)
-    freqs_GHz = freqs / 1e9
-    times = np.unique(sim.time_array)
+    freqs_GHz = np.unique(sim.freq_array) / 1e9
     ants = sim.antenna_numbers
 
     # Simulate and apply the gains
     if seed is not None:
         np.random.seed(seed)
     gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
-    # Support amplitude time variation.
-    if timescale is not None and ref_time is not None:
-        gains = vary_gain_amps(
-            gains, times, ref_time, timescale, vary_amp, variation_mode
-        )
-    apply_gains(sim, gains)
+    apply_gains(sim, gains, time_vary_params)
 
     return sim, gains
 
 def add_reflections(sim, seed=None, dly=1200, dly_spread=0, 
-                    amp=1e-3, amp_scale=0):
+                    amp=1e-3, amp_scale=0, time_vary_params=None):
     """
     Add per-antenna reflection gains to the simulation.
 
@@ -172,6 +156,13 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
         Fractional variation in the reflection amplitude between antennas.
         Default is 0. 
 
+    time_vary_params : dict, optional
+        Parameters for adding time variation to the gains. Keys should 
+        be any of ('amp', 'amplitude', 'phs', 'phase'). Values should 
+        be the set of variation parameters (parameters prefixed by 
+        'variation' in the ``vary_gains_in_time`` function) to be used.
+        Default behavior is to leave the gains constant in time.
+
     Returns
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
@@ -184,8 +175,8 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
     # Setup
     sim = _sim_to_uvd(sim)
     freqs_GHz = np.unique(sim.freq_array) / 1e9
-    Nants = sim.Nants_data
     ants = sim.antenna_numbers
+    Nants = len(ants)
 
     # Randomize parameters in a realistic way.
     delays_ns = stats.norm.rvs(dly, dly_spread, Nants)
@@ -196,7 +187,7 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
     gains = hera_sim.sigchain.gen_reflection_gains(
         freqs_GHz, ants, amp=amps, dly=delays_ns, phs=phases
     )
-    apply_gains(sim, gains)
+    apply_gains(sim, gains, time_vary_params)
 
     return sim, gains
 
@@ -263,8 +254,13 @@ def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300))
     sim.data_array += xtalk
     return sim, xtalk
 
-def apply_gains(sim, gains):
+def apply_gains(sim, gains, time_vary_params=None):
     """Apply per-antenna gains to a simulation."""
+    # Support gain variation in time.
+    times = np.unique(sim.time_array)
+    time_vary_params = time_vary_params or {}
+    for mode, vary_params in time_vary_params.items():
+        gains = vary_gain_amps(gains, times, mode, **vary_params)
     for antpairpol in sim.get_antpairpols():
         blt_inds, _, pol_inds = sim._key2inds(antpairpol)
         this_slice = (blt_inds, 0, slice(None), pol_inds[0])
@@ -274,27 +270,97 @@ def apply_gains(sim, gains):
         )
     return
 
-def vary_gain_amps(
+def vary_gains_in_time(
     gains, 
     times, 
-    ref_time, 
-    timescale,
-    vary_amp=0,
-    variation_mode='linear'
+    mode='amp',
+    variation_ref_times=None, 
+    variation_timescales=None,
+    variation_amps=(0.05,),
+    variation_modes=('linear',),
+    clip_gains=True
     ):
-    """Vary gains in time."""
-    gain_shape = list(gains.values())[0].shape
-    phases = (times - ref_time) / timescale
-    if variation_mode == 'linear':
-        envelope = 1 + vary_amp * phases
-    elif variation_mode == 'sinusoidal':
-        envelope = 1 + np.sin(2 * np.pi * phases)
-    elif variation_mode == 'noiselike':
-        envelope = stats.norm.rvs(1, vary_amp, times.size)
-    else:
+    """Vary gain amplitudes or phases in time.
+    
+    Parameters
+    ----------
+    gains : dict
+        Dictionary containing the per-antenna gains to make vary in time.
+    times : array-like of float
+        Times at which to simulate time variation. Should match the unique 
+        times in the visibility metadata.
+    mode : str, optional
+        Whether to vary the amplitudes or the phases. Accepts 'amp', 
+        'amplitude', 'phs', or 'phase' as a value. Default is 'amp'.
+    variation_ref_times : float or array-like of float, optional
+        Reference time(s) to use for generating time variation. If not 
+        using the 'noiselike' option, then this is the time where the 
+        gains are unchanged from their original values. Default is to 
+        use the middle time. This should have the same units as the 
+        `times` parameter.
+    variation_timescales : float or array-like of float, optional
+        Timescale on which the variation is supposed to take place. For 
+        sinusoidal variation, this is the period of the variation. This 
+        should be in the same units as the `times` parameter. Default 
+        is to use the entire length of `times`.
+    variation_amps : float or array-like of float, optional
+        Amplitude of the variation, as a fraction of the input gains. 
+        This is *not* the peak-to-peak amplitude! Default is 5%.
+    variation_modes : str or array-like of str, optional
+        Which type(s) of time variation to simulate. Currently supported 
+        options are 'linear', 'sinusoidal', and 'noiselike'. Default is 
+        to vary gains linearly over the given times.
+    clip_gains : bool, optional
+        Whether to clip the gains so that they do not vary by more than 
+        100% of their original values. Default is True. Raises a warning 
+        if gains are clipped.
+
+    Returns
+    -------
+    time_varied_gains : dict
+        Dictionary of gains with time variation applied.
+    """
+    # Setup for handling multiple modes of variation at once.
+    if variation_ref_times is None:
+        variation_ref_times = (np.median(times),)
+    if variation_timescales is None:
+        variation_timescales = (times[-1] - times[0],)
+    variation_modes = _listify(variation_modes)
+    variation_amps = _listify(variation_amps)
+    variation_ref_times = _listify(variation_ref_times)
+    variation_timescales = _listify(variation_timescales)
+    variation_params = (
+        variation_modes, variation_amps, variation_ref_times, variation_timescales
+    )
+    Nmodes = max(len(param) for param in variation_params)
+    if any(Nmodes % param != 0 for param in variation_params):
+        raise ValueError(
+            "Input variation parameters are coprime in length. "
+            "Please ensure variation parameters are either all "
+            "the same length, or can be broadcast to the same "
+            "length as the longest variation parameter."
+        )
+    iterator = zip(
+        variation_ref_times * (Nmodes // len(variation_ref_times)),
+        variation_timescales * (Nmodes // len(variation_timescales)),
+        variation_modes * (Nmodes // len(variation_modes)),
+        variation_amps * (Nmodes // len(variation_amps)),
+    )
+
+    # Generate an envelope for adding time variation.
+    envelope = 1
+    for ref_time, timescale, variation_amp, variation_mode in iterator:
+        phases = (times - ref_time) / timescale
+        if variation_mode == 'linear':
+            envelope *= 1 + 2 * vary_amp * phases
+        elif variation_mode == 'sinusoidal':
+            envelope *= 1 + vary_amp * np.sin(2 * np.pi * phases)
+        elif variation_mode == 'noiselike':
+            envelope *= stats.norm.rvs(1, vary_amp, times.size)
+    if not np.all(envelope == 1):
         warn("Time variation method not supported; returning.")
         return gains
-    if not np.allclose(envelope, np.clip(envelope, 0, 2)):
+    if clip_gains and not np.allclose(envelope, np.clip(envelope, 0, 2)):
         warn(
             "Gains vary in time by an amount more than their time-"
             "independent values. Clipping time-variation envelope."
@@ -302,8 +368,11 @@ def vary_gain_amps(
         )
         envelope = np.clip(envelope, 0, 2)
     envelope = np.outer(envelope, np.ones(gain_shape[-1]))
-    # XXX can refactor this; might be worth doing if adding option to
-    # make time-dependent phases as well
+    if mode in ('phs', 'phase'):
+        envelope = np.exp(1j*envelope)
+
+    # Actually apply the time variation.
+    gain_shape = list(gains.values())[0].shape
     if len(gain_shape) == 1:
         gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
     else:
@@ -740,3 +809,28 @@ def _sim_files_exist(data_files, save_dir, sky_cmp):
         for sim_file in sim_file_names
     ]
     return all(os.path.exists(sim_file) for sim_file in sim_files)
+
+# ------- Argparsers ------- #
+
+def file_prep_argparser():
+    """Argparser for running simulation file prep from the command line."""
+    a = argparse.ArgumentParser(
+        description="Modifiy simulation files to match observation parameters."
+    )
+    a.add_argument("simfile", type=str, help="Simulation file to be modified.")
+    a.add_argument("obsdir", type=str, help="Directory containing observation files.")
+    a.add_argument("savedir", type=str, help="Destination to write modified files.")
+    a.add_argument("--clobber", default=False, action="store_true", 
+                   help="Overwrite existing modified simulation files.")
+
+    return a
+
+def systematics_argparser():
+    """Argparser for adding systematics to visibility data from the command line."""
+    a = argparse.ArgumentParser(
+        description="Simulate and apply systematics to visibility data."
+    )
+    a.add_argument("infile", type=str, help="Path to file containing visibilities to corrupt.")
+    #a.add_argument("")
+
+    return a
