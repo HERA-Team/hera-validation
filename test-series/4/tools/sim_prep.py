@@ -937,8 +937,14 @@ def sim_prep_argparser():
     file_opts.add_argument("simfile", type=str, help="Simulation file to be modified.")
     file_opts.add_argument("obsdir", type=str, help="Directory containing observation files.")
     file_opts.add_argument("savedir", type=str, help="Destination to write modified files.")
-    file_opts.add_argument("--clobber", default=False, action="store_true", 
-                   help="Overwrite existing modified simulation files.")
+    file_opts.add_argument(
+        "--skip_truth", default=False, action="store_true",
+        help="Skip writing the true visibilities to disk; only write corrupted."
+    )
+    file_opts.add_argument(
+        "--clobber", default=False, action="store_true", 
+        help="Overwrite existing modified simulation files."
+    )
     systematics = a.add_argument_group(title="Options for simulating systematics.")
     systematics.add_argument("--seed", default=None, help="Random seed for all components.")
     systematics.add_argument(
