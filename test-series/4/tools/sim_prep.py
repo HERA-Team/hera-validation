@@ -925,42 +925,24 @@ def _sim_files_exist(data_files, save_dir, sky_cmp, state):
     ]
     return all(os.path.exists(sim_file) for sim_file in sim_files)
 
-# ------- Argparsers ------- #
+# ------- Argparser ------- #
 
-def file_prep_argparser():
-    """Argparser for running simulation file prep from the command line."""
-    a = argparse.ArgumentParser(
-        description="Modifiy simulation files to match observation parameters."
-    )
-    a.add_argument("simfile", type=str, help="Simulation file to be modified.")
-    a.add_argument("obsdir", type=str, help="Directory containing observation files.")
-    a.add_argument("savedir", type=str, help="Destination to write modified files.")
-    a.add_argument("--clobber", default=False, action="store_true", 
+def sim_prep_argparser():
+    """Argparser for preparing simulation files and adding systematics."""
+    desc = "Modify simulation files to match observation parameters "
+    desc += "and optionally apply systematics."
+    a = argparse.ArgumentParser(description=desc)
+    file_opts = a.add_argument_group(title="File preparation parameters.")
+    file_opts.add_argument("simfile", type=str, help="Simulation file to be modified.")
+    file_opts.add_argument("obsdir", type=str, help="Directory containing observation files.")
+    file_opts.add_argument("savedir", type=str, help="Destination to write modified files.")
+    file_opts.add_argument("--clobber", default=False, action="store_true", 
                    help="Overwrite existing modified simulation files.")
-
-    return a
-
-def systematics_argparser():
-    """Argparser for adding systematics to visibility data from the command line."""
-    a = argparse.ArgumentParser(
-        description="Simulate and apply systematics to visibility data."
+    systematics = a.add_argument_group(title="Options for simulating systematics.")
+    systematics.add_argument("--seed", default=None, help="Random seed for all components.")
+    systematics.add_argument(
+        "--config", default=None, type=str, help="Configuration file for systematics."
     )
-    a.add_argument("infile", type=str, help="Path to file containing visibilities to corrupt.")
-    a.add_argument("savedir", type=str, 
-                   help="Destination to write visibilities with systematics applied.")
-    a.add_argument("--seed", type=int, default=None, help="Random seed for all components.")
-    a.add_argument("--config", type=str, default=None, help="Systematics parameter configuration.")
-    a.add_argument("--clobber", default=False, action="store_true", 
-                   help="Overwrite existing simulation files with systematics.")
+    args = a.parse_args()
+    return args
 
-    noise_opts = a.add_argument_group(title="Parameters for simulating noise.")
-    noise_opts.add_argument("--Trx", type=float, default=100, help="Receiver temperature in K.")
-    noise_opts.add_argument("--noise_seed", type=int, default=None, help="Random seed for noise.")
-
-    gain_opts = a.add_argument_group(title="Parameters for simulating bandpass gains.")
-    
-
-    reflection_opts = a.add_argument_group(title="Parameters for simulating cable reflections.")
-
-    xtalk_opts = a.add_argument_group(title="Parameters for simulating cross-coupling crosstalk.")
-    return a
