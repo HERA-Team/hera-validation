@@ -508,6 +508,7 @@ def prepare_sim_files(
     save_dir, 
     sky_cmp=None,
     systematics_params=None, 
+    save_truth=True,
     clobber=True
     ):
     """
@@ -528,6 +529,8 @@ def prepare_sim_files(
         Dictionary mapping systematics names (i.e. 'noise', 'gains') to 
         a dictionary of parameters to use for generating the systematic.
         Default is to not simulate/apply systematics.
+    save_truth : bool, optional
+        Whether to save the true visibilities. Default is True.
     clobber : bool, optional
         Whether to overwrite files that may share the same name as the new files to 
         be saved in ``save_dir``. Default is to overwrite files.
@@ -536,29 +539,34 @@ def prepare_sim_files(
     sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
 
     # Don't do anything if the files already exist and clobber is False.
-    if not clobber and _sim_files_exist(data_files, save_dir, sky_cmp):
-        print("Simulation files exist and clobber set to False; returning.")
+    true_files_exist = _sim_files_exist(data_files, save_dir, sky_cmp, 'true')
+    corrupt_files_exist = _sim_files_exist(data_files, save_dir, sky_cmp, 'corrupt')
+    save_corrupt = bool(systematics_params)
+    write_truth = save_truth and (clobber or not true_files_exist)
+    write_corrupt = save_corrupt and (clobber or not corrupt_files_exist)
+    if not (write_truth or write_corrupt):
+        print("No new files to make; returning.")
         return
 
     # Modify the simulation data to match the reference metadata.
     sim_uvd = adjust_sim_to_data(sim_file, data_files)
 
     # Chunk the simulation data and write to disk.
-    chunk_sim_and_save(
-        sim_uvd, data_files, save_dir, sky_cmp, state='true', clobber
-    )
+    if write_truth:
+        chunk_sim_and_save(
+            sim_uvd, data_files, save_dir, sky_cmp, state='true', clobber
+        )
 
-    # Apply systematics if parameters for doing so have been specified.
-    if systematics_params is not None:
+    # Apply systematics if desired.
+    if write_corrupt:
         sim_uvd, systematics, params = apply_systematics(
             sim_uvd, **systematics_params
         )
         chunk_sim_and_save(
             sim_uvd, data_files, save_dir, sky_cmp, state='corrupt', clobber
         )
-        # TODO: write code for dumping systematics to an h5 file
-        # TODO: write code for dumping parameters to a json/yaml file
     
+        save_config(params, data_files[0], save_dir, sky_cmp, clobber)
     return
 
 def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
@@ -764,6 +772,37 @@ def chunk_sim_and_save(
         this_uvd.write_uvh5(save_path, clobber=clobber)
     return
 
+def save_config(config, ref_file, save_dir, sky_cmp, clobber=True):
+    """
+    Write the configuration used for systematics simulation to disk.
+    
+    Parameters
+    ----------
+    config : dict
+        Dictionary mapping names of systematics components (e.g. 'noise' 
+        or 'gains') to parameters used to simulate the systematic.
+    ref_file : str
+        Path to a reference file, to be used for extracting the JD.
+    save_dir : str or path-like object
+        Path to the directory where the chunked files will be saved.
+    sky_cmp : str
+        String denoting which sky component has been simulated. Should 
+        be one of the following: ('foregrounds', 'eor', 'sum').
+    clobber : bool, optional
+        Whether to overwrite any existing files that share the new 
+        filenames. Default is to overwrite files.
+    """
+    jd_pattern = re.compile("[0-9]{7}")
+    jd = jd_pattern.findall(ref_file)[0]
+    filename = f"{jd}.config.{sky_cmp}.yaml"
+    save_path = os.path.join(save_dir, filename)
+    if not clobber and os.path.exists(save_path):
+        print("Config file exists and clobber set to False; returning.")
+        return
+    with open(save_path, 'w') as f:
+        f.write(yaml.dump(config))
+    return
+
 # ------- Helper Functions ------- #
 
 def _sim_to_uvd(sim):
@@ -867,11 +906,12 @@ def _parse_filename_for_cmp(filename):
         )
     return sky_cmp[0][:-5]
 
-def _sim_files_exist(data_files, save_dir, sky_cmp):
+def _sim_files_exist(data_files, save_dir, sky_cmp, state):
     """Check if the chunked simulation files already exist."""
     file_ext = os.path.splitext(data_files[0])[1]
     data_file_names = [os.path.split(dfile)[1] for dfile in data_files]
     sim_file_names = [data_file.replace("HH", f"{sky_cmp}") for data_file in data_file_names]
+    # Catch cases where the data files don't have 'HH' in their name.
     if all(
         sim_file == data_file for sim_file, data_file in zip(sim_file_names, data_file_names)
     ):
@@ -880,7 +920,7 @@ def _sim_files_exist(data_files, save_dir, sky_cmp):
             for sim_file in sim_file_names
         ]
     sim_files = [
-        os.path.join(save_dir, sim_file.replace(file_ext, ".true" + file_ext))
+        os.path.join(save_dir, sim_file.replace(file_ext, f".{state}" + file_ext))
         for sim_file in sim_file_names
     ]
     return all(os.path.exists(sim_file) for sim_file in sim_files)
