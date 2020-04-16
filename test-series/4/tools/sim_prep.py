@@ -1,6 +1,8 @@
 import copy
 import os
 import re
+import time
+
 import numpy as np
 from scipy import interpolate, stats
 from warnings import warn
@@ -31,13 +33,15 @@ def add_noise(sim, Trx=100, seed=None):
     Trx : float, optional
         The receiver temperature, in Kelvin.
     seed : int, optional
-        The random seed.
+        The random seed. Not used if not specified. Use value 'random' 
+        to have a seed automatically generated.
     """
     if not isinstance(sim, Simulator):
         sim = Simulator(data=sim)
 
     lsts = np.unique(sim.data.lst_array)
     freqs = np.unique(sim.data.freq_array)
+    seed = _gen_seed(seed)
 
     # Find out which antenna has the autocorrelation data, in case we
     # add noise before inflating.
@@ -79,10 +83,6 @@ def add_gains(
     sim, 
     seed=None, 
     time_vary_params=None,
-    ref_time=None,
-    timescale=None, 
-    vary_amp=0,
-    variation_mode='linear', 
     **gain_params
     ):
     """
@@ -92,17 +92,16 @@ def add_gains(
     ----------
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
-
     seed : int, optional
-        The random seed. Default is to not seed the RNG.
-
+        The random seed. Not used if not specified. Use value 'random' 
+        to have a seed automatically generated.
     time_vary_params : dict, optional
         Parameters for adding time variation to the gains. Keys should 
         be any of ('amp', 'amplitude', 'phs', 'phase'). Values should 
         be the set of variation parameters (parameters prefixed by 
         'variation' in the ``vary_gains_in_time`` function) to be used.
         Default behavior is to leave the gains constant in time.
-
+        See ``vary_gains_in_time`` function for details on parameters.
     **gain_params
         The parameters for simulating bandpass gains.
 
@@ -110,7 +109,6 @@ def add_gains(
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
         Simulation with bandpass gains applied. 
-
     gains : dict
         Dictionary mapping antenna numbers to bandpass gains as a 
         function of frequency (and potentially time).
@@ -119,6 +117,7 @@ def add_gains(
     sim = _sim_to_uvd(sim)
     freqs_GHz = np.unique(sim.freq_array) / 1e9
     ants = sim.antenna_numbers
+    seed = _gen_seed(seed)
 
     # Simulate and apply the gains
     if seed is not None:
@@ -137,37 +136,32 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
     ----------
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
-
     seed : int, optional
-        The random seed. Not used if not specified.
-
+        The random seed. Not used if not specified. Use value 'random' 
+        to have a seed automatically generated.
     dly : float, optional
         Delay at which the reflection appears, in nanoseconds. 
         Default is 1200 ns.
-
     dly_spread : float, optional
         Absolute amount the delays vary between antennas, in ns. 
         Default is 0 ns.
-
     amp : float, optional
         Amplitude of the reflection. Default is 1e-3.
-
     amp_scale : float, optional
         Fractional variation in the reflection amplitude between antennas.
         Default is 0. 
-
     time_vary_params : dict, optional
         Parameters for adding time variation to the gains. Keys should 
         be any of ('amp', 'amplitude', 'phs', 'phase'). Values should 
         be the set of variation parameters (parameters prefixed by 
         'variation' in the ``vary_gains_in_time`` function) to be used.
         Default behavior is to leave the gains constant in time.
+        See ``vary_gains_in_time`` function for details on parameters.
 
     Returns
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
         Simulation with reflection gains applied. 
-
     gains : dict
         Dictionary mapping antenna numbers to reflection gains as a 
         function of frequency (and potentially time).
@@ -177,8 +171,11 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
     freqs_GHz = np.unique(sim.freq_array) / 1e9
     ants = sim.antenna_numbers
     Nants = len(ants)
+    seed = _gen_seed(seed)
 
     # Randomize parameters in a realistic way.
+    if seed is not None:
+        np.random.seed(seed)
     delays_ns = stats.norm.rvs(dly, dly_spread, Nants)
     phases = stats.uniform.rvs(0, 2*np.pi, Nants)
     amps = amp * stats.norm.rvs(1, amp_scale, Nants)
@@ -199,28 +196,26 @@ def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300))
     ----------
     sim : :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
         The object containing the simulation data and metadata.
-
     seed : int, optional
-        The random seed. Not used if not specified.
-
+        The random seed. Not used if not specified. Use value 'random' 
+        to have a seed automatically generated.
     Ncopies : int, optional
         Number of delays at which to generate crosstalk. Default is 
         to use 10 copies.
-
     amp_range : tuple of float, optional
         Base-10 logarithm of the amplitude of the crosstalk at the 
         first and last delays where crosstalk is injected. Default 
         is to use -4 and -6.
-
     dly_rng : tuple of float, optional
-        Minmum and maximum delays, in ns,  at which to inject 
-        crosstalk. Default is 900-1300 ns.
+        Minmum and maximum delays, in ns, at which to inject 
+        crosstalk. Crosstalk is inserted at ``Ncopies`` delays spaced 
+        linearly between the minimum and maximum delays. 
+        Default is 900-1300 ns.
 
     Returns
     -------
     corrupted_sim : :class:`pyuvdata.UVData`
         Simulation with crosstalk applied.
-
     xtalk : np.ndarray
         Data for the crosstalk visibilities.
     """
@@ -229,6 +224,7 @@ def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300))
     freqs_GHz = np.unique(sim.freq_array) / 1e9
     amps = np.logspace(*amp_range, Ncopies)
     dlys = np.linspace(*dly_rng, Ncopies)
+    seed = _gen_seed(seed)
 
     xtalk = np.zeros_like(sim.data_array, dtype=np.complex)
     if seed is not None:
@@ -388,38 +384,64 @@ def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
         xtalk += _gen_xtalk(freqs, autovis, amp, -dly, phs)
     return xtalk
 
+SYSTEMATICS_SIMULATORS = {
+    'noise' : add_noise,
+    'gains' : add_gains,
+    'reflections' : add_reflections,
+    'xtalk' : add_xtalk
+}
+
 def apply_systematics(
     sim, 
     seed=None,
-    noise_params=None, 
-    gain_params=None, 
-    reflection_params=None,
-    xtalk_params=None
+    noise=None, 
+    gains=None, 
+    reflections=None,
+    xtalk=None
     ):
     """One-stop shop for applying systematics to a simulation.
 
     # TODO: docstring
     """
-    noise_params = noise_params or {'seed' : seed}
-    gain_params = gain_params or {'seed' : seed}
-    reflection_params = reflection_params or {'seed' : seed}
-    xtalk_params = xtalk_params or {'seed' : seed}
-    sim = _sim_to_uvd(sim)
-    sim, noise = add_noise(sim, **noise_params)
-    sim, gains = add_gains(sim, **gain_params)
-    sim, reflections = add_reflections(sim, **reflection_params)
-    sim, xtalk = add_xtalk(sim, **xtalk_params)
-    systematics = {
+    # If sim components are specified, initialize parameter dictionaries.
+    # This allows users to pass an empty dictionary and use the same 
+    # value for ``seed`` throughout. This is useful in case the user 
+    # wants to have the random seeds automatically generated by using 
+    # the 'random' setting for ``seed``, but all other settings default.
+    if noise is not None:
+        noise = noise or {'seed' : seed}
+    if gains is not None:
+        gains = gains or {'seed' : seed}
+    if reflections is not None:
+        reflections = reflections or {'seed' : seed}
+    if xtalk is not None:
+        xtalk = xtalk or {'seed' : seed}
+    
+    # Collect all of the parameters into a dictionary.
+    parameters = {
         'noise' : noise,
         'gains' : gains,
         'reflections' : reflections,
         'xtalk' : xtalk
     }
-    return sim, systematics
+    # Update random seeds in case user wants to "randomly" generate seeds.
+    for params in parameters.values():
+        if params is not None and 'seed' in params.keys():
+            params['seed'] = _gen_seed(params['seed'])
+
+    # Apply the systematics and track the results.
+    systematics = {}
+    sim = _sim_to_uvd(sim)
+    for systematic, params in parameters.items():
+        # This is a bit of a hack, but I can't think of a better way...
+        add_systematic = SYSTEMATICS_SIMULATORS[systematic]
+        sim, systematics[systematic] = add_systematic(sim, **params)
+
+    return sim, systematics, parameters
 
 # ------- Functions for preparing files ------- #
 
-def prepare_sim_files(sim_file, data_files, save_dir, sky_cmp=None, clobber=True):
+def adjust_sim_to_data(sim_file, data_files):
     """
     Modify simulated data to be consistent with an observation's metadata.
     
@@ -427,20 +449,14 @@ def prepare_sim_files(sim_file, data_files, save_dir, sky_cmp=None, clobber=True
     ----------
     sim_file : str or path-like object
         Path to simulation file to modify.
-        
     data_files : array-like of str or path-like objects
         Collection of paths to observed data.
-        
-    save_dir : str or path-like object
-        Path to directory where modified simulation files should be saved.
-    
-    sky_cmp : str, optional
-        Sky component simulated in ``sim_file``. If not provided, then the component 
-        is inferred from the file name.
-        
-    clobber : bool, optional
-        Whether to overwrite files that may share the same name as the new files to 
-        be saved in ``save_dir``. Default is to overwrite files.
+
+    Returns
+    -------
+    modified_sim_data : :class:`pyuvdata.UVData`
+        Simulation data that has been modified to match the metadata 
+        contents of ``data_files``. See notes for details.
         
     Notes
     -----
@@ -462,14 +478,6 @@ def prepare_sim_files(sim_file, data_files, save_dir, sky_cmp=None, clobber=True
     integrations as the observation files (assuming a uniform number of integration 
     per file) and written to disk. 
     """
-    # Get the sky component if not specified.
-    sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
-
-    # Don't do anything if the files already exist and clobber is False.
-    if not clobber and _sim_files_exist(data_files, save_dir, sky_cmp):
-        print("Simulation files exist and clobber set to False; returning.")
-        return
-
     # Ensure the data files are a list and load in their metadata.
     data_files = _listify(data_files)
     ref_uvd = UVData()
@@ -492,8 +500,64 @@ def prepare_sim_files(sim_file, data_files, save_dir, sky_cmp=None, clobber=True
     # Make sure the data is conjugated properly so redcal doesn't break.
     sim_uvd.conjugate_bls('ant1<ant2')
     
+    return sim_uvd
+
+def prepare_sim_files(
+    sim_file, 
+    data_files, 
+    save_dir, 
+    sky_cmp=None,
+    systematics_params=None, 
+    clobber=True
+    ):
+    """
+    Modify simulation data to match reference metadata and apply systematics.
+    
+    Parameters
+    ----------
+    sim_file : str or path-like object
+        Path to simulation file to modify.
+    data_files : array-like of str or path-like objects
+        Collection of paths to observed data.
+    save_dir : str or path-like object
+        Path to directory where modified simulation files should be saved.
+    sky_cmp : str, optional
+        Sky component simulated in ``sim_file``. If not provided, then the component 
+        is inferred from the file name.
+    systematics_params : dict, optional
+        Dictionary mapping systematics names (i.e. 'noise', 'gains') to 
+        a dictionary of parameters to use for generating the systematic.
+        Default is to not simulate/apply systematics.
+    clobber : bool, optional
+        Whether to overwrite files that may share the same name as the new files to 
+        be saved in ``save_dir``. Default is to overwrite files.
+    """
+    # Get the sky component if not specified.
+    sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
+
+    # Don't do anything if the files already exist and clobber is False.
+    if not clobber and _sim_files_exist(data_files, save_dir, sky_cmp):
+        print("Simulation files exist and clobber set to False; returning.")
+        return
+
+    # Modify the simulation data to match the reference metadata.
+    sim_uvd = adjust_sim_to_data(sim_file, data_files)
+
     # Chunk the simulation data and write to disk.
-    chunk_sim_and_save(sim_uvd, data_files, save_dir, sky_cmp, clobber)
+    chunk_sim_and_save(
+        sim_uvd, data_files, save_dir, sky_cmp, state='true', clobber
+    )
+
+    # Apply systematics if parameters for doing so have been specified.
+    if systematics_params is not None:
+        sim_uvd, systematics, params = apply_systematics(
+            sim_uvd, **systematics_params
+        )
+        chunk_sim_and_save(
+            sim_uvd, data_files, save_dir, sky_cmp, state='corrupt', clobber
+        )
+        # TODO: write code for dumping systematics to an h5 file
+        # TODO: write code for dumping parameters to a json/yaml file
     
     return
 
@@ -505,11 +569,9 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     ----------
     sim_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the simulation data.
-        
     ref_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the reference data. 
         Only needs to have the metadata loaded.
-        
     tol : float, optional
         The maximum allowable discrepancy in antenna position components.
         Default is 1 meter.
@@ -591,7 +653,6 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     ----------
     sim_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the simulation data.
-        
     ref_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the reference data. 
         Only the metadata for this object needs to be read.
@@ -660,7 +721,14 @@ def rephase_to_reference(sim_uvd, ref_uvd):
         setattr(return_uvd, _property, getattr(sim_uvd, _property))
     return return_uvd
 
-def chunk_sim_and_save(sim_uvd, ref_files, save_dir, sky_cmp, clobber=True):
+def chunk_sim_and_save(
+    sim_uvd, 
+    ref_files, 
+    save_dir, 
+    sky_cmp=None, 
+    state=None, 
+    clobber=True
+    ):
     """
     Chunk the simulation data to match the reference file and write to disk.
     
@@ -669,17 +737,13 @@ def chunk_sim_and_save(sim_uvd, ref_files, save_dir, sky_cmp, clobber=True):
     sim_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the simulation data 
         to chunk and write to disk.
-        
     ref_files : iterable of str
         Iterable of filepaths to use for reference when chunking.
-        
     save_dir : str or path-like object
         Path to the directory where the chunked files will be saved.
-        
-    sky_cmp : str
+    sky_cmp : str, optional
         String denoting which sky component has been simulated. Should 
         be one of the following: ('foregrounds', 'eor', 'sum').
-        
     clobber : bool, optional
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
@@ -690,7 +754,11 @@ def chunk_sim_and_save(sim_uvd, ref_files, save_dir, sky_cmp, clobber=True):
         uvd.read(ref_file, read_data=False)
         times = np.unique(uvd.time_array)
         jd = re.search(jd_pattern, ref_file).groupdict()
-        filename = f"zen.{jd['major']}.{jd['minor']}.{sky_cmp}.true.uvh5"
+        filename = f"zen.{jd['major']}.{jd['minor']}.uvh5"
+        if sky_cmp is not None:
+            filename = filename.replace(".uvh5", f".{sky_cmp}.uvh5")
+        if state is not None:
+            filename = filename.replace(".uvh5", f".{state}.uvh5")
         save_path = os.path.join(save_dir, filename)
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
@@ -707,6 +775,13 @@ def _sim_to_uvd(sim):
         sim_.read(sim)
         sim = sim_
     return sim
+
+def _gen_seed(seed):
+    """Generate a random seed pseudo-randomly if desired."""
+    if seed is None or type(seed) is int:
+        return seed
+    elif seed == 'random':
+        return time.time_ns() % 2**32
 
 def _get_array_intersection(sim_antpos, ref_antpos, tol=1.0):
     """Find the optimal choice of simulation subarray and return it."""
@@ -831,6 +906,21 @@ def systematics_argparser():
         description="Simulate and apply systematics to visibility data."
     )
     a.add_argument("infile", type=str, help="Path to file containing visibilities to corrupt.")
-    #a.add_argument("")
+    a.add_argument("savedir", type=str, 
+                   help="Destination to write visibilities with systematics applied.")
+    a.add_argument("--seed", type=int, default=None, help="Random seed for all components.")
+    a.add_argument("--config", type=str, default=None, help="Systematics parameter configuration.")
+    a.add_argument("--clobber", default=False, action="store_true", 
+                   help="Overwrite existing simulation files with systematics.")
 
+    noise_opts = a.add_argument_group(title="Parameters for simulating noise.")
+    noise_opts.add_argument("--Trx", type=float, default=100, help="Receiver temperature in K.")
+    noise_opts.add_argument("--noise_seed", type=int, default=None, help="Random seed for noise.")
+
+    gain_opts = a.add_argument_group(title="Parameters for simulating bandpass gains.")
+    
+
+    reflection_opts = a.add_argument_group(title="Parameters for simulating cable reflections.")
+
+    xtalk_opts = a.add_argument_group(title="Parameters for simulating cross-coupling crosstalk.")
     return a
