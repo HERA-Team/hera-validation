@@ -555,7 +555,8 @@ def prepare_sim_files(
     # Chunk the simulation data and write to disk.
     if write_truth:
         chunk_sim_and_save(
-            sim_uvd, data_files, save_dir, sky_cmp, state='true', clobber
+            sim_uvd, data_files, save_dir, 
+            sky_cmp=sky_cmp, state='true', clobber=clobber
         )
 
     # Apply systematics if desired.
@@ -564,7 +565,8 @@ def prepare_sim_files(
             sim_uvd, **systematics_params
         )
         chunk_sim_and_save(
-            sim_uvd, data_files, save_dir, sky_cmp, state='corrupt', clobber
+            sim_uvd, data_files, save_dir, 
+            sky_cmp=sky_cmp, state='corrupt', clobber=clobber
         )
     
         save_config(params, data_files[0], save_dir, sky_cmp, clobber)
