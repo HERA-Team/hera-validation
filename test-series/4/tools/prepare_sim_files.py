@@ -24,7 +24,7 @@ import glob
 import os
 import yaml
 
-from . import sim_prep
+import sim_prep
 
 a = sim_prep.sim_prep_argparser()
 # This will need to be updated for future validation tests,
