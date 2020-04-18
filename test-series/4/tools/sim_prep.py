@@ -9,7 +9,7 @@ import numpy as np
 from scipy import interpolate, stats
 from warnings import warn
 
-from data import DATA_PATH
+from .data import DATA_PATH
 from pyuvdata import UVData
 from pyuvdata.utils import polstr2num
 from hera_cal.io import to_HERAData

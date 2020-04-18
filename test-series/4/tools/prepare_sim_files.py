@@ -22,9 +22,10 @@ convention with a minor modification.
 """
 import glob
 import os
+import sys
 import yaml
 
-import sim_prep
+from . import sim_prep
 
 a = sim_prep.sim_prep_argparser()
 # This will need to be updated for future validation tests,
