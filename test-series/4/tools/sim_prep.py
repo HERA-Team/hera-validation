@@ -24,7 +24,7 @@ else:
 
 # ------- Functions for adding systematics ------- #
 
-def add_noise(sim, Trx=100, seed=None):
+def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     """
     Add thermal noise to a UVData object, based on its auto-correlations.
 
@@ -64,29 +64,39 @@ def add_noise(sim, Trx=100, seed=None):
     _, _, yy_pol_ind = sim.data._key2inds('yy')
     xx_slice = (blts, 0, slice(None), xx_pol_ind[0])
     yy_slice = (blts, 0, slice(None), yy_pol_ind[0])
-    noise = np.zeros_like(sim.data.data_array, dtype=np.complex)
     if seed is not None:
         np.random.seed(seed)
-    noise[xx_slice] += sim.add_noise(
-        'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
-        ret_vis=True, add_vis=False
-    )[xx_slice]
-    if seed is not None:
-        np.random.seed(seed)
-    noise[yy_slice] += sim.add_noise(
-        'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
-        ret_vis=True, add_vis=False
-    )[yy_slice]
-    sim.data.data_array += noise
+    if ret_cmp:
+        noise = np.zeros_like(sim.data.data_array, dtype=np.complex)
+        noise[xx_slice] += sim.add_noise(
+            'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
+            ret_vis=True, add_vis=False
+        )[xx_slice]
+        noise[yy_slice] += sim.add_noise(
+            'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
+            ret_vis=True, add_vis=False
+        )[yy_slice]
+        sim.data.data_array += noise
+        return sim, noise
+    else:
+        sim.data.data_array[xx_slice] += sim.add_noise(
+            'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
+            ret_vis=True, add_vis=False
+        )[xx_slice]
+        sim.data.data_array[yy_slice] += sim.add_noise(
+            'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
+            ret_vis=True, add_vis=False
+        )[yy_slice]
+        return sim
 
-    return sim, noise
 
 def add_gains(
     sim, 
     seed=None, 
     time_vary_params=None,
+    ret_cmp=True,
     **gain_params
-    ):
+):
     """
     Add per-antenna bandpass gains to the simulation.
 
@@ -127,10 +137,18 @@ def add_gains(
     gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
     apply_gains(sim, gains, time_vary_params)
 
-    return sim, gains
+    return sim if not ret_cmp else sim, gains
 
-def add_reflections(sim, seed=None, dly=1200, dly_spread=0, 
-                    amp=1e-3, amp_scale=0, time_vary_params=None):
+def add_reflections(
+    sim, 
+    seed=None, 
+    dly=1200, 
+    dly_spread=0, 
+    amp=1e-3, 
+    amp_scale=0, 
+    time_vary_params=None,
+    ret_cmp=True
+):
     """
     Add per-antenna reflection gains to the simulation.
 
@@ -188,9 +206,16 @@ def add_reflections(sim, seed=None, dly=1200, dly_spread=0,
     )
     apply_gains(sim, gains, time_vary_params)
 
-    return sim, gains
+    return sim if not ret_cmp else sim, gains
 
-def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300)):
+def add_xtalk(
+    sim, 
+    seed=None, 
+    Ncopies=10, 
+    amp_range=(-4,-6), 
+    dly_rng=(900,1300),
+    ret_cmp=True
+):
     """
     Add cross-coupling crosstalk to the simulation's cross-correlations.
 
@@ -228,7 +253,8 @@ def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300))
     dlys = np.linspace(*dly_rng, Ncopies)
     seed = _gen_seed(seed)
 
-    xtalk = np.zeros_like(sim.data_array, dtype=np.complex)
+    if ret_cmp:
+        xtalk = np.zeros_like(sim.data_array, dtype=np.complex)
     if seed is not None:
         np.random.seed(seed)
     for antpairpol in sim.get_antpairpols():
@@ -245,12 +271,20 @@ def add_xtalk(sim, seed=None, Ncopies=10, amp_range=(-4,-6), dly_rng=(900,1300))
         # Generate random phases and pull the autocorrelation.
         phs = stats.uniform.rvs(0, 2*np.pi, Ncopies)
         autovis = sim.get_data(ai, ai, pol)
-        xtalk[this_slice] = gen_xtalk(
-            autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
-        )
+        if ret_cmp:
+            xtalk[this_slice] = gen_xtalk(
+                autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
+            )
+        else:
+            sim.data_array[this_slice] = gen_xtalk(
+                autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
+            )
 
-    sim.data_array += xtalk
-    return sim, xtalk
+    if ret_cmp:
+        sim.data_array += xtalk
+        return sim, xtalk
+    else:
+        return sim
 
 def apply_gains(sim, gains, time_vary_params=None):
     """Apply per-antenna gains to a simulation."""
@@ -277,7 +311,7 @@ def vary_gains_in_time(
     variation_amps=(0.05,),
     variation_modes=('linear',),
     clip_gains=True
-    ):
+):
     """Vary gain amplitudes or phases in time.
     
     Parameters
@@ -401,7 +435,7 @@ def apply_systematics(
     reflections=None,
     xtalk=None,
     return_systematics=True
-    ):
+):
     """One-stop shop for applying systematics to a simulation.
 
     # TODO: docstring
@@ -442,7 +476,7 @@ def apply_systematics(
         if return_systematics:
             sim, systematics[systematic] = add_systematic(sim, **params)
         else:
-            sim, _ = add_systematic(sim, **params)
+            sim = add_systematic(sim, ret_cmp=False, **params)
 
     # Simulating this and keeping all the systematics may be very 
     # memory-intensive, so sometimes we might not want to keep 
@@ -523,7 +557,7 @@ def prepare_sim_files(
     systematics_params=None, 
     save_truth=True,
     clobber=True
-    ):
+):
     """
     Modify simulation data to match reference metadata and apply systematics.
     
