@@ -399,7 +399,8 @@ def apply_systematics(
     noise=None, 
     gains=None, 
     reflections=None,
-    xtalk=None
+    xtalk=None,
+    return_systematics=True
     ):
     """One-stop shop for applying systematics to a simulation.
 
@@ -432,12 +433,22 @@ def apply_systematics(
             params['seed'] = _gen_seed(params['seed'])
 
     # Apply the systematics and track the results.
-    systematics = {}
+    if return_systematics:
+        systematics = {}
     sim = _sim_to_uvd(sim)
     for systematic, params in parameters.items():
         # This is a bit of a hack, but I can't think of a better way...
         add_systematic = SYSTEMATICS_SIMULATORS[systematic]
-        sim, systematics[systematic] = add_systematic(sim, **params)
+        if return_systematics:
+            sim, systematics[systematic] = add_systematic(sim, **params)
+        else:
+            sim, _ = add_systematic(sim, **params)
+
+    # Simulating this and keeping all the systematics may be very 
+    # memory-intensive, so sometimes we might not want to keep 
+    # track of the intermediate products.
+    if not return_systematics:
+        systematics = None
 
     return sim, systematics, parameters
 
@@ -562,8 +573,10 @@ def prepare_sim_files(
 
     # Apply systematics if desired.
     if write_corrupt:
+        # TODO: update this to handle being able to save the systematics
+        # but maybe do a warning if the task may cause a MemoryError
         sim_uvd, systematics, params = apply_systematics(
-            sim_uvd, **systematics_params
+            sim_uvd, return_systematics=False, **systematics_params
         )
         chunk_sim_and_save(
             sim_uvd, data_files, save_dir, 
