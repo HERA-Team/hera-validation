@@ -787,7 +787,7 @@ def chunk_sim_and_save(
     sky_cmp=None, 
     state=None, 
     clobber=True
-    ):
+):
     """
     Chunk the simulation data to match the reference file and write to disk.
     
