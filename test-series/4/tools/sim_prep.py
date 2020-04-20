@@ -488,7 +488,7 @@ def apply_systematics(
 
 # ------- Functions for preparing files ------- #
 
-def adjust_sim_to_data(sim_file, data_files):
+def adjust_sim_to_data(sim_file, data_files, verbose=False):
     """
     Modify simulated data to be consistent with an observation's metadata.
     
@@ -536,15 +536,23 @@ def adjust_sim_to_data(sim_file, data_files):
     sim_uvd.read(sim_file, polarizations=use_pols)
 
     # Downselect in time and rephase LSTs to match the reference data.
+    if verbose:
+        print("Rephasing simulation to reference data...")
     sim_uvd = rephase_to_reference(sim_uvd, ref_uvd)
 
     # Inflate the simulation so antenna downselection can actually be done.
+    if verbose:
+        print("Inflating simulation by redundancy...")
     sim_uvd.inflate_by_redundancy()
     
     # Find and use the intersection of the RIMEz and H1C arrays.
+    if verbose:
+        print("Choosing subset of antennas to keep...")
     sim_uvd = downselect_antennas(sim_uvd, ref_uvd)
     
     # Make sure the data is conjugated properly so redcal doesn't break.
+    if verbose:
+        print("Conjugating simulation to ant1<ant2 convention...")
     sim_uvd.conjugate_bls('ant1<ant2')
     
     return sim_uvd
@@ -556,7 +564,8 @@ def prepare_sim_files(
     sky_cmp=None,
     systematics_params=None, 
     save_truth=True,
-    clobber=True
+    clobber=True,
+    verbose=True
 ):
     """
     Modify simulation data to match reference metadata and apply systematics.
@@ -582,6 +591,9 @@ def prepare_sim_files(
         Whether to overwrite files that may share the same name as the new files to 
         be saved in ``save_dir``. Default is to overwrite files.
     """
+    if verbose:
+        print("Beginning file preparation...")
+
     # Get the sky component if not specified.
     sky_cmp = sky_cmp or _parse_filename_for_cmp(sim_file)
 
@@ -596,10 +608,12 @@ def prepare_sim_files(
         return
 
     # Modify the simulation data to match the reference metadata.
-    sim_uvd = adjust_sim_to_data(sim_file, data_files)
+    sim_uvd = adjust_sim_to_data(sim_file, data_files, verbose=verbose)
 
     # Chunk the simulation data and write to disk.
     if write_truth:
+        if verbose:
+            print("Writing true visibilities to disk...")
         chunk_sim_and_save(
             sim_uvd, data_files, save_dir, 
             sky_cmp=sky_cmp, state='true', clobber=clobber
@@ -609,14 +623,19 @@ def prepare_sim_files(
     if write_corrupt:
         # TODO: update this to handle being able to save the systematics
         # but maybe do a warning if the task may cause a MemoryError
+        if verbose:
+            print("Simulating and applying systematics...")
         sim_uvd, systematics, params = apply_systematics(
             sim_uvd, return_systematics=False, **systematics_params
         )
+        if verbose:
+            print("Writing corrupted visibilities to disk...")
         chunk_sim_and_save(
             sim_uvd, data_files, save_dir, 
             sky_cmp=sky_cmp, state='corrupt', clobber=clobber
         )
-    
+        if verbose:
+            print("Writing sysytematics parameters to disk...")
         save_config(params, data_files[0], save_dir, sky_cmp, clobber)
     return
 
@@ -983,6 +1002,7 @@ def sim_prep_argparser():
     desc = "Modify simulation files to match observation parameters "
     desc += "and optionally apply systematics."
     a = argparse.ArgumentParser(description=desc)
+    a.add_argument("--verbose", default=False, action="store_true")
     file_opts = a.add_argument_group(title="File preparation parameters.")
     file_opts.add_argument("simfile", type=str, help="Simulation file to be modified.")
     file_opts.add_argument("obsdir", type=str, help="Directory containing observation files.")

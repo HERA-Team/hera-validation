@@ -37,5 +37,5 @@ if a.config is not None:
 
 sim_prep.prepare_sim_files(
     a.simfile, obsfiles, a.savedir, systematics_params=systematics_params, 
-    save_truth=not a.skip_truth, clobber=a.clobber
+    save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
 )
