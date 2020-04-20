@@ -292,7 +292,7 @@ def apply_gains(sim, gains, time_vary_params=None):
     times = np.unique(sim.time_array)
     time_vary_params = time_vary_params or {}
     for mode, vary_params in time_vary_params.items():
-        gains = vary_gain_amps(gains, times, mode, **vary_params)
+        gains = vary_gains_in_time(gains, times, mode, **vary_params)
     for antpairpol in sim.get_antpairpols():
         blt_inds, _, pol_inds = sim._key2inds(antpairpol)
         this_slice = (blt_inds, 0, slice(None), pol_inds[0])
