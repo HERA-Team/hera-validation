@@ -22,6 +22,7 @@ convention with a minor modification.
 """
 import glob
 import os
+import re
 import sys
 import yaml
 
@@ -35,7 +36,31 @@ if a.config is not None:
     with open(a.config, 'r') as cfg:
         systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
 
-sim_prep.prepare_sim_files(
-    a.simfile, obsfiles, a.savedir, systematics_params=systematics_params, 
-    save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
+# Load in some things necessary for doing fileprep in chunks (which is 
+# necessary for large files)
+jd_pattern = re.compile('[0-9]{7}.[0-9]{5}')
+start_jd, end_jd = (
+    float(jd_pattern.findall(f)[0]) for f in (obsfiles[0], obsfiles[-1])
 )
+jd = int(start_jd)
+sky_cmp = sim_prep._parse_filename_for_cmp(a.simfile)
+new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
+chunk_len = len(obsfiles) // a.Nchunks
+time_vary_params = systematics_params.get('time_vary_params', None)
+if chunk_len > 1 and time_vary_params is not None:
+    file_duration = end_jd - start_jd
+    center_jd = 0.5 * (start_jd + end_jd)
+    if time_vary_params.get('variation_ref_times', None) is None:
+        time_vary_params['variation_ref_times'] = center_jd
+    if time_vary_params.get('variation_timescales', None) is None:
+        time_vary_params['variation_timescales'] = file_duration
+
+for N in range(a.Nchunks):
+    obsfile_chunk = obsfiles[N * chunk_len : (N+1) * chunk_len]
+    sim_prep.prepare_sim_files(
+        a.simfile, obsfile_chunk, a.savedir, systematics_params=systematics_params, 
+        save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
+    )
+    with open(new_config, 'r') as cfg:
+        systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
+

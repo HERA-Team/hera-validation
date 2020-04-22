@@ -1015,6 +1015,10 @@ def sim_prep_argparser():
         "--clobber", default=False, action="store_true", 
         help="Overwrite existing modified simulation files."
     )
+    file_opts.add_argument(
+        "--Nchunks", default=1, type=int, 
+        help="Number of chunks to break obsfiles glob into for file preparation."
+    )
     systematics = a.add_argument_group(title="Options for simulating systematics.")
     systematics.add_argument("--seed", default=None, help="Random seed for all components.")
     systematics.add_argument(
