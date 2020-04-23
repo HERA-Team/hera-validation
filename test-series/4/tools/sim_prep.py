@@ -768,8 +768,8 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     ref_times = np.array([sim_to_ref_time_map[sim_time] for sim_time in use_times])
 
     # Downselect in time and load data.
-    ref_uvd.select(times=ref_times)
-    sim_uvd.select(times=use_times)
+    #ref_uvd.select(times=ref_times) # Figure out why the times don't match exactly.
+    sim_uvd.select(times=use_times) # We should only need to do this one select.
     data, _, _ = sim_uvd.build_datacontainers()
 
     # Build the antpair -> ENU baseline vector dictionary.
@@ -827,11 +827,13 @@ def chunk_sim_and_save(
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
+    uvd = UVData()
+    uvd.read(ref_uvd, read_data=False)
+    Nint_per_file = uvd.Ntimes
+    sim_times = np.unique(sim_uvd.time_array)
     jd_pattern = re.compile(r"\.(?P<major>[0-9]{7})\.(?P<minor>[0-9]{5}).")
-    for ref_file in ref_files:
-        uvd = UVData()
-        uvd.read(ref_file, read_data=False)
-        times = np.unique(uvd.time_array)
+    for count, ref_file in enumerate(ref_files):
+        # Figure out filing information.
         jd = re.search(jd_pattern, ref_file).groupdict()
         filename = f"zen.{jd['major']}.{jd['minor']}.uvh5"
         if sky_cmp is not None:
@@ -839,6 +841,13 @@ def chunk_sim_and_save(
         if state is not None:
             filename = filename.replace(".uvh5", f".{state}.uvh5")
         save_path = os.path.join(save_dir, filename)
+
+        # Choose which times go into this chunk.
+        # XXX don't do it this way. We want the files to match the IDR2 files.
+        # This is a hack that lets us get away with having a time missing.
+        # Figure out why the times aren't matching up in the lst rephasing step.
+        this_slice = slice(count * Nint_per_file, (count + 1) * Nint_per_file)
+        times = sim_times[this_slice]
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
     return
