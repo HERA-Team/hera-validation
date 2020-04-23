@@ -46,14 +46,18 @@ jd = int(start_jd)
 sky_cmp = sim_prep._parse_filename_for_cmp(a.simfile)
 new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
 chunk_len = len(obsfiles) // a.Nchunks
-time_vary_params = systematics_params.get('time_vary_params', None)
+if 'gains' in systematics_params.keys():
+    time_vary_params = systematics_params['gains'].get('time_vary_params', None)
+else:
+    time_vary_params = None
 if chunk_len > 1 and time_vary_params is not None:
     file_duration = end_jd - start_jd
     center_jd = 0.5 * (start_jd + end_jd)
-    if time_vary_params.get('variation_ref_times', None) is None:
-        time_vary_params['variation_ref_times'] = center_jd
-    if time_vary_params.get('variation_timescales', None) is None:
-        time_vary_params['variation_timescales'] = file_duration
+    for vary_mode, vary_params in time_vary_params.items():
+        if vary_params.get('variation_ref_times', None) is None:
+            vary_params['variation_ref_times'] = center_jd
+        if vary_params.get('variation_timescales', None) is None:
+            vary_params['variation_timescales'] = file_duration
 
 for N in range(a.Nchunks):
     obsfile_chunk = obsfiles[N * chunk_len : (N+1) * chunk_len]
