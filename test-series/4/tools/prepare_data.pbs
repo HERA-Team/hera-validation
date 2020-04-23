@@ -55,9 +55,9 @@ for obsday in ${obsdays[@]:0:1}; do
     fi
     for simfile in ${skycmp[@]}; do
         simfile=${simdir}/${simfile}
-        echo "python -m tools.prepare_sim_data ${simfile} ${obsdir} ${savedir} \
+        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} \
                      --config ${cfgfile} --Nchunks 2 --clobber"
-        python -m tools.prepare_sim_data ${simfile} ${obsdir} ${savedir} \
+        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} \
                --config ${cfgfile} --Nchunks 2 --clobber 
     done
 done
