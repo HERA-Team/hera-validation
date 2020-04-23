@@ -802,8 +802,9 @@ def rephase_to_reference(sim_uvd, ref_uvd):
 
 def chunk_sim_and_save(
     sim_uvd, 
-    ref_files, 
     save_dir, 
+    ref_files=None,
+    Nint_per_file=None,
     sky_cmp=None, 
     state=None, 
     clobber=True
@@ -811,42 +812,67 @@ def chunk_sim_and_save(
     """
     Chunk the simulation data to match the reference file and write to disk.
     
+    Chunked files have the following naming convention:
+    save_dir/zen.{jd_major}.{jd_minor}[.{sky_cmp}][.{state}].uvh5
+    The entires in brackets are optional and may be omitted.
+
     Parameters
     ----------
     sim_uvd : :class:`pyuvdata.UVData`
         :class:`pyuvdata.UVData` object containing the simulation data 
         to chunk and write to disk.
-    ref_files : iterable of str
-        Iterable of filepaths to use for reference when chunking.
     save_dir : str or path-like object
         Path to the directory where the chunked files will be saved.
+    ref_files : iterable of str
+        Iterable of filepaths to use for reference when chunking. This must 
+        be specified if ``Nint_per_file`` is not specified. This determines 
+        (and overrides, if also provided) ``Nint_per_file`` if provided.
+    Nint_per_file : int, optional
+        Number of integrations per chunked file. This must be specified 
+        if ``ref_files`` is not specified.
     sky_cmp : str, optional
         String denoting which sky component has been simulated. Should 
         be one of the following: ('foregrounds', 'eor', 'sum').
+    state : str, optional
+        String denoting whether the file is the true sky or corrupted.
     clobber : bool, optional
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
-    uvd = UVData()
-    uvd.read(ref_uvd, read_data=False)
-    Nint_per_file = uvd.Ntimes
+    if ref_files is None and Nint_per_file is None:
+        raise ValueError(
+            "Either a glob of reference files or the number of integrations "
+            "per file must be provided."
+        )
+
+    # Pull the number of integrations per file if needed.
+    if ref_files is not None:
+        uvd = UVData()
+        uvd.read(ref_files[0], read_data=False)
+        Nint_per_file = uvd.Ntimes
+        jd_pattern = re.compile(r"\.(?P<major>[0-9]{7})\.(?P<minor>[0-9]{5}).")
+
+    # Pull the simulation times, then start the chunking process.
     sim_times = np.unique(sim_uvd.time_array)
-    jd_pattern = re.compile(r"\.(?P<major>[0-9]{7})\.(?P<minor>[0-9]{5}).")
-    for count, ref_file in enumerate(ref_files):
-        # Figure out filing information.
-        jd = re.search(jd_pattern, ref_file).groupdict()
-        filename = f"zen.{jd['major']}.{jd['minor']}.uvh5"
+    Nfiles = int(sim_uvd.Ntimes / Nint_per_file)
+    for Nfile in range(Nfiles):
+        # Figure out filing and slicing information.
+        if ref_files is not None:
+            jd = re.search(jd_pattern, ref_files[Nfile]).groupdict()
+            jd = float(f"{jd['major']}.{jd['minor']}")
+            start_ind = np.argmin(np.abs(sim_times - jd))
+        else:
+            start_ind = Nfile * Nint_per_file
+            jd = np.round(sim_times[start_ind], 5)
+        this_slice = slice(start_ind, start_ind + Nint_per_file)
+        filename = f"zen.{jd}.uvh5"
         if sky_cmp is not None:
             filename = filename.replace(".uvh5", f".{sky_cmp}.uvh5")
         if state is not None:
             filename = filename.replace(".uvh5", f".{state}.uvh5")
         save_path = os.path.join(save_dir, filename)
 
-        # Choose which times go into this chunk.
-        # XXX don't do it this way. We want the files to match the IDR2 files.
-        # This is a hack that lets us get away with having a time missing.
-        # Figure out why the times aren't matching up in the lst rephasing step.
-        this_slice = slice(count * Nint_per_file, (count + 1) * Nint_per_file)
+        # Chunk it and write to disk.
         times = sim_times[this_slice]
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
@@ -1005,7 +1031,7 @@ def _sim_files_exist(data_files, save_dir, sky_cmp, state):
     ]
     return all(os.path.exists(sim_file) for sim_file in sim_files)
 
-# ------- Argparser ------- #
+# ------- Argparsers ------- #
 
 def sim_prep_argparser():
     """Argparser for preparing simulation files and adding systematics."""
@@ -1037,3 +1063,16 @@ def sim_prep_argparser():
     args = a.parse_args()
     return args
 
+def abscal_model_argparser():
+    """Argparser for preparing the abscal model."""
+    desc = "Prepare an absolute calibration model from a simulation file."
+    a = argparse.ArgumentParser(description=desc)
+    a.add_argument("simfile", type=str, help="Simulation file to use.")
+    a.add_argument("reffile", type=str, help="Reference for array selection.")
+    a.add_argument("savedir", type=str, help="Where to write files to disk.")
+    a.add_argument("Nint_per_file", type=int, help="Number of integrations per file.")
+    a.add_argument("lst_min", type=float, help="Lower bound of LST range, in hours.")
+    a.add_argument("lst_max", type=float, help="Upper bound of LST range, in hours.")
+    a.add_argument("--clobber", default=False, action="store_true", help="Overwrite files.")
+    args = a.parse_args()
+    return args
