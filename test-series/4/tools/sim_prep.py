@@ -768,6 +768,7 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     ref_times = np.array([sim_to_ref_time_map[sim_time] for sim_time in use_times])
 
     # Downselect in time and load data.
+    ref_uvd.select(times=ref_times)
     sim_uvd.select(times=use_times)
     data, _, _ = sim_uvd.build_datacontainers()
 
