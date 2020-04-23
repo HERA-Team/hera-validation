@@ -1,9 +1,6 @@
 """
 Prepare reference files for absolute calibration.
 """
-import glob
-import os
-
 import numpy as np
 from astropy import units
 from . import sim_prep
