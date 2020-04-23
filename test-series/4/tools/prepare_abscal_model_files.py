@@ -3,6 +3,8 @@ Prepare reference files for absolute calibration.
 """
 import numpy as np
 from astropy import units
+from pyuvdata import UVData
+
 from . import sim_prep
 
 a = sim_prep.abscal_model_argparser()
