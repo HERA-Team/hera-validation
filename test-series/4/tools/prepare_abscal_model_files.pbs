@@ -42,10 +42,9 @@ elif [[ " ${remotes[@]} " =~ "test-4.0.0" ]]; then
 fi
 cd test-series/4
 
-echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} \
-             ${Nint_per_file} ${lst_min} ${lst_max} --clobber"
+echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose"
 python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} \
-       ${Nint_per_file} ${lst_min} ${lst_max} --clobber
+       ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose
 
 # Update permissions.
 chmod ug+r $savedir/*

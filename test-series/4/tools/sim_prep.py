@@ -1074,5 +1074,6 @@ def abscal_model_argparser():
     a.add_argument("lst_min", type=float, help="Lower bound of LST range, in hours.")
     a.add_argument("lst_max", type=float, help="Upper bound of LST range, in hours.")
     a.add_argument("--clobber", default=False, action="store_true", help="Overwrite files.")
+    a.add_argument("--verbose", default=False, action="store_true", help="Print progress.")
     args = a.parse_args()
     return args
