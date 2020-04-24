@@ -27,8 +27,6 @@ declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simfile=$testdir/data/visibilities/sum.uvh5
 declare savedir=$testdir/data/visibilities/abscal_model
 declare Nint_per_file=60
-declare lst_min=0 # hours
-declare lst_max=12 # hours
 
 # Make sure the tools are up to date and switch to the right directory.
 cd ~/hera_software/hera-validation
@@ -42,9 +40,13 @@ elif [[ " ${remotes[@]} " =~ "test-4.0.0" ]]; then
 fi
 cd test-series/4
 
-echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose"
-python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} \
-       ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose
+# Do all LSTs in groups of 6 hours each.
+for lst_min in 0 6 12 18; do
+    lst_max=$((lst_min+6))
+    echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose"
+    python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} \
+           ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose
+done
 
 # Update permissions.
 chmod ug+r $savedir/*
