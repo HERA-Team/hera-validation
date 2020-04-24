@@ -17,7 +17,7 @@ ref_uvd.read(a.reffile)
 
 # Do a downselection in time on the simulation.
 lst_min = a.lst_min * units.hr.to('day') * 2 * np.pi
-lst_max = a.lst_min * units.hr.to('day') * 2 * np.pi
+lst_max = a.lst_max * units.hr.to('day') * 2 * np.pi
 sim_times = np.unique(sim_uvd.time_array)
 sim_lsts = np.unique(sim_uvd.lst_array)
 keep_times = sim_times[np.logical_and(lst_min < sim_lsts, sim_lsts < lst_max)]
