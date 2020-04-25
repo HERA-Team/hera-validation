@@ -861,7 +861,7 @@ def chunk_sim_and_save(
             start_ind = Nfile * Nint_per_file
             jd = np.round(sim_times[start_ind], 5)
         this_slice = slice(start_ind, start_ind + Nint_per_file)
-        filename = f"zen.{jd}.uvh5"
+        filename = f"zen.{jd:.5f}.uvh5"
         if sky_cmp is not None:
             filename = filename.replace(".uvh5", f".{sky_cmp}.uvh5")
         if state is not None:
