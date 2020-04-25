@@ -41,8 +41,8 @@ fi
 cd test-series/4
 
 # Do all LSTs in groups of 6 hours each.
-for lst_min in 0; do
-    lst_max=$((lst_min+1))
+for lst_min in 0 6 12 18; do
+    lst_max=$((lst_min+6))
     echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose"
     python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --clobber --verbose
 done
