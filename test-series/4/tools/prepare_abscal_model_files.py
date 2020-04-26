@@ -36,7 +36,7 @@ for Nchunk in range(a.Nchunks):
     if a.verbose:
         print("Reading file...")
         uvd = UVData()
-        uvd.read(a.simfile, times=keep_times[this_slice]
+        uvd.read(a.simfile, times=keep_times[this_slice])
 
     # Now inflate the simulation and adjust the array.
     if a.verbose:
