@@ -850,7 +850,7 @@ def chunk_sim_and_save(
 
     # Pull the simulation times, then start the chunking process.
     sim_times = np.unique(sim_uvd.time_array)
-    Nfiles = int(sim_uvd.Ntimes / Nint_per_file)
+    Nfiles = int(np.ceil(sim_uvd.Ntimes / Nint_per_file))
     for Nfile in range(Nfiles):
         # Figure out filing and slicing information.
         if ref_files is not None:
