@@ -26,6 +26,7 @@ import re
 import sys
 import yaml
 
+import numpy as np
 from . import sim_prep
 
 a = sim_prep.sim_prep_argparser()
@@ -45,12 +46,12 @@ start_jd, end_jd = (
 jd = int(start_jd)
 sky_cmp = sim_prep._parse_filename_for_cmp(a.simfile)
 new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
-chunk_len = len(obsfiles) // a.Nchunks
+chunk_len = int(np.ceil(len(obsfiles) / a.Nchunks))
 if 'gains' in systematics_params.keys():
     time_vary_params = systematics_params['gains'].get('time_vary_params', None)
 else:
     time_vary_params = None
-if chunk_len > 1 and time_vary_params is not None:
+if a.Nchunks > 1 and time_vary_params is not None:
     file_duration = end_jd - start_jd
     center_jd = 0.5 * (start_jd + end_jd)
     for vary_mode, vary_params in time_vary_params.items():
