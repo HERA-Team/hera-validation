@@ -45,7 +45,6 @@ cd test-series/4
 
 echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --Nchunks ${Nchunks} --clobber --verbose"
 python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --Nchunks ${Nchunks} --clobber --verbose
-done
 
 # Update permissions.
 chmod ug+r $savedir/*
