@@ -616,7 +616,7 @@ def prepare_sim_files(
         if verbose:
             print("Writing true visibilities to disk...")
         chunk_sim_and_save(
-            sim_uvd, data_files, save_dir, 
+            sim_uvd, save_dir, ref_files=data_files, 
             sky_cmp=sky_cmp, state='true', clobber=clobber
         )
 
@@ -632,7 +632,7 @@ def prepare_sim_files(
         if verbose:
             print("Writing corrupted visibilities to disk...")
         chunk_sim_and_save(
-            sim_uvd, data_files, save_dir, 
+            sim_uvd, save_dir, ref_files=data_files, 
             sky_cmp=sky_cmp, state='corrupt', clobber=clobber
         )
         if verbose:
