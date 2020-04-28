@@ -42,16 +42,22 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     if not isinstance(sim, Simulator):
         sim = Simulator(data=sim)
 
-    lsts = np.unique(sim.data.lst_array)
+    # TODO: update how the interpolation objects are made
+    # The current implementation does not work with phase wraps!
+    # quick and dirty solution
+    original_lsts = copy.deepcopy(sim.data.lst_array)
+    unwrapped_lsts = sim.data.lst_array
+    unwrapped_lsts[unwrapped_lsts < unwrapped_lsts[0]] += 2 * np.pi
+    lsts = np.unique(unwrapped_lsts)
+    sim.data.lst_array = unwrapped_lsts
     freqs = np.unique(sim.data.freq_array)
-    seed = _gen_seed(seed)
+    freqs_GHz = freqs / 1e9  # GHz
 
     # Find out which antenna has the autocorrelation data, in case we
     # add noise before inflating.
     antpair = next(ants for ants in sim.data.get_antpairs() if ants[0] == ants[1])
 
     # Set up to use the autos to set the noise level
-    freqs_GHz = freqs / 1e9  # GHz
     beam_poly = np.load(os.path.join(DATA_PATH, "RIMEz_beam_poly.npy"))
     omega_p = np.polyval(beam_poly, freqs_GHz)
     Jy_to_K = hera_sim.noise.jy2T(freqs_GHz, omega_p) / 1000
@@ -66,6 +72,7 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     xx_slice = (blts, 0, slice(None), xx_pol_ind[0])
     yy_slice = (blts, 0, slice(None), yy_pol_ind[0])
     if seed is not None:
+        seed = _gen_seed(seed)
         np.random.seed(seed)
     if ret_cmp:
         noise = np.zeros_like(sim.data.data_array, dtype=np.complex)
@@ -78,7 +85,6 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
             ret_vis=True, add_vis=False
         )[yy_slice]
         sim.data.data_array += noise
-        return sim, noise
     else:
         sim.data.data_array[xx_slice] += sim.add_noise(
             'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
@@ -88,8 +94,10 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
             'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
             ret_vis=True, add_vis=False
         )[yy_slice]
-        return sim
 
+    # Return simulation LSTs back to their original form, then return results.
+    sim.data.lst_array = original_lsts
+    return sim if not ret_cmp else sim, noise
 
 def add_gains(
     sim, 
