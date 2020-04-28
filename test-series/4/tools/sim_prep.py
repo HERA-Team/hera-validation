@@ -12,8 +12,9 @@ from warnings import warn
 from .data import DATA_PATH
 from pyuvdata import UVData
 from pyuvdata.utils import polstr2num
+from hera_cal.abscal import get_d2m_time_map
 from hera_cal.io import to_HERAData
-from hera_cal.abscal import rephase_vis, get_d2m_time_map
+from hera_cal.utils import lst_rephase
 from hera_sim import Simulator
 
 import hera_sim
@@ -741,50 +742,58 @@ def rephase_to_reference(sim_uvd, ref_uvd):
         reference data.
     """
     # Convert the simulation to a HERAData object. 
-    sim_uvd = to_HERAData(copy.deepcopy(sim_uvd))
-    hd_metas = sim_uvd.get_metadata_dict()
+    sim_uvd = to_HERAData(sim_uvd)
 
-    # Load in useful metadata.
-    sim_lsts = hd_metas['lsts']
-    sim_times = hd_metas['times']
-    ref_lsts = np.unique(ref_uvd.lst_array)
-    ref_times = np.unique(ref_uvd.time_array)
-    sim_to_ref_time_map = get_d2m_time_map(sim_times, sim_lsts, ref_times, ref_lsts)
-    use_times = np.array([
-        sim_time for sim_time, ref_time in sim_to_ref_time_map.items()
-        if ref_time is not None
-    ])
-    use_lsts = np.array(
-        [sim_lsts[np.argmin(np.abs(sim_times - time))] for time in use_times]
+    # Load in times and LSTs; get a mapping between reference/sim times.
+    ref_time_to_lst_map = {
+        ref_time : ref_lst 
+        for ref_time, ref_lst in zip(ref_uvd.time_array, ref_uvd.lst_array)
+    }
+    sim_time_to_lst_map = {
+        sim_time : sim_lst
+        for sim_time, sim_lst in zip(sim_uvd.time_array, sim_uvd.lst_array)
+    }
+    ref_times = np.array(list(ref_time_to_lst_map.keys()))
+    ref_lsts = np.array(list(ref_time_to_lst_map.values()))
+    sim_times = np.array(list(sim_time_to_lst_map.keys()))
+    sim_lsts = np.array(list(sim_time_to_lst_map.values()))
+    ref_to_sim_time_map = get_d2m_time_map(ref_times, ref_lsts, sim_times, sim_lsts)
+    
+    # Figure out how much to rephase for each integration.
+    selected_sim_lsts = np.array(
+        list(
+            sim_lsts[sim_times.tolist().index(sim_time)] 
+            for sim_time in ref_to_sim_time_map.values()
+        )
     )
-    ref_lsts = np.array([
-        ref_lsts[np.argmin(np.abs(ref_times - sim_to_ref_time_map[sim_time]))] 
-        for sim_time in use_times
-    ])
-    ref_times = np.array([sim_to_ref_time_map[sim_time] for sim_time in use_times])
+    dlst = ref_lsts - selected_sim_lsts
+    dlst = np.where(np.isclose(dlst, 0, atol=0.1), dlst, dlst - 2 * np.pi)
 
     # Downselect in time and load data.
-    #ref_uvd.select(times=ref_times) # Figure out why the times don't match exactly.
-    sim_uvd.select(times=use_times) # We should only need to do this one select.
+    sim_uvd.select(times=list(ref_to_sim_time_map.values()))
     data, _, _ = sim_uvd.build_datacontainers()
+    data.select_or_expand_times(list(ref_to_sim_time_map.values()))
 
     # Build the antpair -> ENU baseline vector dictionary.
-    antpos, ants = sim_uvd.get_ENU_antpos()
-    bls = {bl : None for bl in data.bls()}
-    for bl in bls:
-        ai, aj = bl[:2]
-        i, j = ants.tolist().index(ai), ants.tolist().index(aj)
-        bls[bl] = antpos[j] - antpos[i]
+    antpos = data.antpos
+    bls = {
+        (ai,aj,pol) : antpos[aj] - antpos[ai]
+        for ai, aj, pol in data.bls()
+    }
 
     # Rephase and update the data.
-    new_data, new_flags = rephase_vis(
-        data, use_lsts, ref_lsts, bls, hd_metas['freqs']
-    )
-    sim_uvd.update(data=new_data, flags=new_flags)
+    lst_rephase(
+        data, bls, data.freqs, dlst, 
+        lat=sim_uvd.telescope_location_lat_lon_alt_degrees[0]
+    ) # XXX do we want to use the simulation or the reference position?
+      # lat/lon is good to about 6 mas; alt off by about 2 m
+    sim_uvd.update(data=data)
     new_sim_lsts = np.zeros_like(sim_uvd.lst_array)
     new_sim_times = np.zeros_like(sim_uvd.time_array)
-    for use_time, ref_time, ref_lst in zip(use_times, ref_times, ref_lsts):
-        blt_slice = np.argwhere(sim_uvd.time_array == use_time)
+    loop_iterable = zip(ref_to_sim_time_map.values(), ref_times, ref_lsts)
+    for times, ref_lst in zip(ref_to_sim_time_map.items(), ref_lsts):
+        ref_time, sim_time = times
+        blt_slice = np.argwhere(sim_uvd.time_array == sim_time)
         new_sim_lsts[blt_slice] = ref_lst
         new_sim_times[blt_slice] = ref_time
     sim_uvd.time_array = new_sim_times
