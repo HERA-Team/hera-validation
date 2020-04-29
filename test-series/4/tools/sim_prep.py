@@ -86,6 +86,7 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
         )[yy_slice]
         sim.data.data_array += noise
     else:
+        noise = None # Avoid error for return statement
         sim.data.data_array[xx_slice] += sim.add_noise(
             'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
             ret_vis=True, add_vis=False
