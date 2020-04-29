@@ -729,6 +729,9 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
         sim_uvd_copy.data_array[this_slice] = sim_data
         sim_uvd_copy.flag_array[this_slice] = sim_uvd.get_flags(antpairpol)
         sim_uvd_copy.nsample_array[this_slice] = sim_uvd.get_nsamples(antpairpol)
+        old_bl = sim_uvd.antnums_to_baseline(ai, aj)
+        new_bl = sim_uvd.antnums_to_baseline(*ref_antpairpol[:2])
+        sim_uvd_copy.baseline_array[sim_uvd.baseline_array == old_bl] = new_bl
         
     return sim_uvd_copy
 
