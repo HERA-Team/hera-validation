@@ -86,7 +86,6 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
         )[yy_slice]
         sim.data.data_array += noise
     else:
-        noise = None # Avoid error for return statement
         sim.data.data_array[xx_slice] += sim.add_noise(
             'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
             ret_vis=True, add_vis=False
@@ -98,7 +97,11 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
 
     # Return simulation LSTs back to their original form, then return results.
     sim.data.lst_array = original_lsts
-    return sim if not ret_cmp else sim, noise
+    
+    if ret_cmp:
+        return sim, noise
+    else:
+        return sim
 
 def add_gains(
     sim, 
@@ -147,7 +150,10 @@ def add_gains(
     gains = hera_sim.sigchain.gen_gains(freqs_GHz, ants, **gain_params)
     apply_gains(sim, gains, time_vary_params)
 
-    return sim if not ret_cmp else sim, gains
+    if ret_cmp:
+        return sim, gains
+    else:
+        return sim
 
 def add_reflections(
     sim, 
@@ -216,7 +222,10 @@ def add_reflections(
     )
     apply_gains(sim, gains, time_vary_params)
 
-    return sim if not ret_cmp else sim, gains
+    if ret_cmp:
+        return sim, gains
+    else:
+        return sim
 
 def add_xtalk(
     sim, 
@@ -375,7 +384,7 @@ def vary_gains_in_time(
         variation_modes, variation_amps, variation_ref_times, variation_timescales
     )
     Nmodes = max(len(param) for param in variation_params)
-    if any(Nmodes % param != 0 for param in variation_params):
+    if any(Nmodes % len(param) != 0 for param in variation_params):
         raise ValueError(
             "Input variation parameters are coprime in length. "
             "Please ensure variation parameters are either all "
@@ -409,12 +418,12 @@ def vary_gains_in_time(
             "Check your parameters if this is unexpected."
         )
         envelope = np.clip(envelope, 0, 2)
+    gain_shape = list(gains.values())[0].shape
     envelope = np.outer(envelope, np.ones(gain_shape[-1]))
     if mode in ('phs', 'phase'):
         envelope = np.exp(1j*envelope)
 
     # Actually apply the time variation.
-    gain_shape = list(gains.values())[0].shape
     if len(gain_shape) == 1:
         gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
     else:
@@ -477,8 +486,10 @@ def apply_systematics(
             params['seed'] = _gen_seed(params['seed'])
 
     # Apply the systematics and track the results.
-    if return_systematics:
-        systematics = {}
+    # Simulating this and keeping all the systematics may be very 
+    # memory-intensive, so sometimes we might not want to keep 
+    # track of the intermediate products.
+    systematics = {} if return_systematics else None
     sim = _sim_to_uvd(sim)
     for systematic, params in parameters.items():
         # This is a bit of a hack, but I can't think of a better way...
@@ -488,11 +499,6 @@ def apply_systematics(
         else:
             sim = add_systematic(sim, ret_cmp=False, **params)
 
-    # Simulating this and keeping all the systematics may be very 
-    # memory-intensive, so sometimes we might not want to keep 
-    # track of the intermediate products.
-    if not return_systematics:
-        systematics = None
 
     return sim, systematics, parameters
 
@@ -874,11 +880,14 @@ def chunk_sim_and_save(
         if ref_files is not None:
             jd = re.search(jd_pattern, ref_files[Nfile]).groupdict()
             jd = float(f"{jd['major']}.{jd['minor']}")
-            start_ind = np.argmin(np.abs(sim_times - jd))
+            uvd = UVData()
+            uvd.read(ref_files[Nfile], read_data=False)
+            times = np.unique(uvd.time_array)
         else:
             start_ind = Nfile * Nint_per_file
             jd = np.round(sim_times[start_ind], 5)
-        this_slice = slice(start_ind, start_ind + Nint_per_file)
+            this_slice = slice(start_ind, start_ind + Nint_per_file)
+            times = sim_times[this_slice]
         filename = f"zen.{jd:.5f}.uvh5"
         if sky_cmp is not None:
             filename = filename.replace(".uvh5", f".{sky_cmp}.uvh5")
@@ -887,7 +896,6 @@ def chunk_sim_and_save(
         save_path = os.path.join(save_dir, filename)
 
         # Chunk it and write to disk.
-        times = sim_times[this_slice]
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
     return
