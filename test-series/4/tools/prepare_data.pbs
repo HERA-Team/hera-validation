@@ -55,10 +55,8 @@ for obsday in ${obsdays[@]:0:1}; do
     fi
     for simfile in ${skycmp[@]}; do
         simfile=${simdir}/${simfile}
-        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} \
-                     --config ${cfgfile} --Nchunks 2 --clobber --verbose"
-        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} \
-               --config ${cfgfile} --Nchunks 2 --clobber --verbose
+        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --config ${cfgfile} --Nchunks 2 --clobber --verbose"
+        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --config ${cfgfile} --Nchunks 2 --clobber --verbose
     done
 done
 
@@ -66,5 +64,4 @@ done
 for savedir in ${savedirs[@]}; do
     chmod ug+r $savedir/*
 done
-# TODO: Make a section here for preparing the pre-filtered abscal model.
 date
