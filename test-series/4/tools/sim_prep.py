@@ -507,7 +507,7 @@ def apply_systematics(
 
 # ------- Functions for preparing files ------- #
 
-def adjust_sim_to_data(sim_file, data_files, lst_min=0, lst_max=24, verbose=False):
+def adjust_sim_to_data(sim_file, data_files, verbose=False):
     """
     Modify simulated data to be consistent with an observation's metadata.
     
@@ -517,10 +517,6 @@ def adjust_sim_to_data(sim_file, data_files, lst_min=0, lst_max=24, verbose=Fals
         Path to simulation file to modify.
     data_files : array-like of str or path-like objects
         Collection of paths to observed data.
-    lst_min : float, optional
-        Minimum LST to keep, in hours. Default is 0.
-    lst_max : float, optional
-        Maximum LST to keep, in hours. Default is 24.
 
     Returns
     -------
@@ -553,19 +549,6 @@ def adjust_sim_to_data(sim_file, data_files, lst_min=0, lst_max=24, verbose=Fals
     ref_uvd = UVData()
     ref_uvd.read(data_files, read_data=False)
 
-    # Keep only lsts in the specified range, but *do not sort*
-    ref_time_to_lst_map = {
-        ref_time : ref_lst 
-        for ref_time, ref_lst in zip(ref_uvd.time_array, ref_uvd.lst_array)
-    }
-    ref_times = np.array(list(ref_time_to_lst_map.keys()))
-    ref_lsts = np.array(list(ref_time_to_lst_map.values()))
-    ref_lsts *= units.day.to('hr') / (2 * np.pi) # Convert to hours
-    times_to_keep = ref_times[
-        np.logical_and(lst_min <= ref_lsts, ref_lsts <= lst_max)
-    ]
-    ref_uvd.select(times=times_to_keep)
-    
     # Load in the simulation data, but only the linear vispols.
     use_pols = [polstr2num(pol) for pol in ('xx', 'yy')]
     sim_uvd = UVData()
@@ -649,6 +632,9 @@ def prepare_sim_files(
         print("No new files to make; returning.")
         return
 
+    # Choose which files to keep based on desired LST cuts.
+    data_files = _apply_lst_cut(data_files, lst_min, lst_max)
+    
     # Modify the simulation data to match the reference metadata.
     sim_uvd = adjust_sim_to_data(
         sim_file, data_files, lst_min=lst_min, lst_max=lst_max, verbose=verbose
@@ -1100,6 +1086,54 @@ def _sim_files_exist(data_files, save_dir, sky_cmp, state):
         for sim_file in sim_file_names
     ]
     return all(os.path.exists(sim_file) for sim_file in sim_files)
+
+def _apply_lst_cut(file_glob, lst_min, lst_max):
+    """
+    Choose a subset of files so that only the specified range of LSTs remain.
+    
+    Parameters
+    ----------
+    file_glob : array-like of str
+        Glob of file paths to trim. The files in the glob should be for a 
+        single day of observation.
+    lst_min : float
+        Lower bound of LST range to keep, in units of hours.
+    lst_max : float
+        Upper bound of LST range to keep, in units of hours.
+
+    Returns
+    -------
+    trimmed_file_glob : list of str
+        File glob trimmed to contain only files whose LSTs lie completely 
+        within the range of LSTs desired.
+    """
+    # Ensure the files are sorted.
+    data_files = sorted(file_glob)
+
+    # Extract parameters necessary for determining the duration of a single file.
+    uvd = UVData()
+    uvd.read(data_files[0], read_data=False)
+    dt = np.median(np.diff(np.unique(uvd.time_array)))
+    Nint_per_file = uvd.Ntimes
+    
+    # Determine which times correspond to LSTs in the desired LST range.
+    uvd = UVData()
+    uvd.read(data_files, read_data=False)
+    time_to_lst_map = {time : lst for time, lst in zip(uvd.time_array, uvd.lst_array)}
+    times = np.array(list(time_to_lst_map.keys()))
+    lsts = np.array(list(time_to_lst_map.values()))
+    lsts *= units.day.to('hr') / (2 * np.pi) # Convert to hours
+    times_to_keep = times[np.logical_and(lst_min <= lsts, lsts <= lst_max)]
+
+    # Actually apply the cut and return the trimmed file glob.
+    tmin, tmax = times_to_keep.min(), times_to_keep.max()
+    jd_pattern = re.compile('[0-9]{7}.[0-9]{5}')
+    jds = [float(jd_pattern.findall(dfile)[0]) for dfile in data_files]
+    data_files = sorted([
+        data_files[index] for index, jd in enumerate(jds) 
+        if tmin <= jd and jd + (dt * Nint_per_file) <= tmax
+    ])
+    return data_files
 
 # ------- Argparsers ------- #
 
