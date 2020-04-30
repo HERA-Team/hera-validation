@@ -636,9 +636,7 @@ def prepare_sim_files(
     data_files = _apply_lst_cut(data_files, lst_min, lst_max)
     
     # Modify the simulation data to match the reference metadata.
-    sim_uvd = adjust_sim_to_data(
-        sim_file, data_files, lst_min=lst_min, lst_max=lst_max, verbose=verbose
-    )
+    sim_uvd = adjust_sim_to_data(sim_file, data_files, verbose=verbose)
 
     # Chunk the simulation data and write to disk.
     if write_truth:
