@@ -506,7 +506,7 @@ def apply_systematics(
 
 # ------- Functions for preparing files ------- #
 
-def adjust_sim_to_data(sim_file, data_files, lst_min=1, lst_max=11, verbose=False):
+def adjust_sim_to_data(sim_file, data_files, lst_min=0, lst_max=24, verbose=False):
     """
     Modify simulated data to be consistent with an observation's metadata.
     
@@ -517,9 +517,9 @@ def adjust_sim_to_data(sim_file, data_files, lst_min=1, lst_max=11, verbose=Fals
     data_files : array-like of str or path-like objects
         Collection of paths to observed data.
     lst_min : float, optional
-        Minimum LST to keep, in hours. Default is 1.
+        Minimum LST to keep, in hours. Default is 0.
     lst_max : float, optional
-        Maximum LST to keep, in hours. Default is 11.
+        Maximum LST to keep, in hours. Default is 24.
 
     Returns
     -------
@@ -598,8 +598,8 @@ def prepare_sim_files(
     save_dir, 
     sky_cmp=None,
     systematics_params=None, 
-    lst_min=1,
-    lst_max=11,
+    lst_min=0,
+    lst_max=24,
     save_truth=True,
     clobber=True,
     verbose=True
@@ -623,9 +623,9 @@ def prepare_sim_files(
         a dictionary of parameters to use for generating the systematic.
         Default is to not simulate/apply systematics.
     lst_min : float, optional
-        Minimum LST to keep, in hours. Default is 1.
+        Minimum LST to keep, in hours. Default is 0.
     lst_max : float, optional
-        Maximum LST to keep, in hours. Default is 11.
+        Maximum LST to keep, in hours. Default is 24.
     save_truth : bool, optional
         Whether to save the true visibilities. Default is True.
     clobber : bool, optional
