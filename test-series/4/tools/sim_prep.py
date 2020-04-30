@@ -701,7 +701,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     ref_uvd.select(antenna_nums=list(sim_to_ref_ant_map.values()), keep_all_metadata=False)
     
     # Update some of the antenna metadata in a copy of the simulation.
-    # This is to ensure that the slices performed in the loop are correctly sized.
+    # This is to ensure that slicing is performed correctly.
     sim_uvd_copy = copy.deepcopy(sim_uvd)
     sim_uvd_copy.ant_1_array = np.asarray(
         [sim_to_ref_ant_map[sim_ant] for sim_ant in sim_uvd.ant_1_array]
@@ -709,17 +709,25 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     sim_uvd_copy.ant_2_array = np.asarray(
         [sim_to_ref_ant_map[sim_ant] for sim_ant in sim_uvd.ant_2_array]
     )
-    sim_uvd_copy.antenna_numbers = ref_uvd.antenna_numbers
-    sim_uvd_copy.antenna_positions = ref_uvd.antenna_positions
-    sim_uvd_copy.telescope_location = ref_uvd.telescope_location
+    attrs_to_update = (
+        "antenna_numbers",
+        "antenna_names",
+        "antenna_positions",
+        "telescope_location",
+        "telescope_location_lat_lon_alt",
+        "telescope_location_lat_lon_alt_degrees",
+    )
+    for attr in attrs_to_update:
+        setattr(sim_uvd_copy, attr, getattr(ref_uvd, attr))
     sim_uvd_copy.history += "\nAntennas adjusted to optimally match H1C antennas."
 
     # Prepare the new data array.
-    for antpairpol in sim_uvd.get_antpairpols():
+    for antpairpol, vis in sim_uvd.antpairpol_iter():
         ai, aj, pol = antpairpol
         ref_antpairpol = (sim_to_ref_ant_map[ai], sim_to_ref_ant_map[aj], pol)
+        ref_bl = ref_antpairpol[:2]
         blts, conj_blts, pol_inds = sim_uvd_copy._key2inds(ref_antpairpol)
-        sim_data = sim_uvd.get_data(antpairpol)
+        
         # Correctly choose which slice to use depending on whether the 
         # reference baseline corresponding to (ai, aj) is conjugated.
         # (If it's conjugated in the reference, then blts is empty.)
@@ -727,14 +735,20 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
             this_slice = (blts, 0, slice(None), pol_inds[0])
         else:
             this_slice = (conj_blts, 0, slice(None), pol_inds[1])
-            sim_data = sim_data.conj()
-        sim_uvd_copy.data_array[this_slice] = sim_data
+            vis = vis.conj()
+            ref_bl = ref_bl[::-1]
+        # Update the data-like parameters.
+        sim_uvd_copy.data_array[this_slice] = vis
         sim_uvd_copy.flag_array[this_slice] = sim_uvd.get_flags(antpairpol)
         sim_uvd_copy.nsample_array[this_slice] = sim_uvd.get_nsamples(antpairpol)
-        old_bl = sim_uvd.antnums_to_baseline(ai, aj)
-        new_bl = sim_uvd.antnums_to_baseline(*ref_antpairpol[:2])
-        sim_uvd_copy.baseline_array[sim_uvd.baseline_array == old_bl] = new_bl
+        # Update the baseline array.
+        old_bl_int = sim_uvd.antnums_to_baseline(ai, aj)
+        new_bl_int = sim_uvd.antnums_to_baseline(*ref_bl)
+        sim_uvd_copy.baseline_array[sim_uvd.baseline_array==old_bl_int] = new_bl_int
         
+    # Update the last of the metadata.
+    sim_uvd_copy.set_uvws_from_antenna_positions()
+
     return sim_uvd_copy
 
 def rephase_to_reference(sim_uvd, ref_uvd):
