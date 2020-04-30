@@ -6,6 +6,7 @@ import time
 import yaml
 
 import numpy as np
+from astropy import units
 from scipy import interpolate, stats
 from warnings import warn
 
