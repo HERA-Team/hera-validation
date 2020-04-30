@@ -1,0 +1,51 @@
+#!/bin/bash
+#PBS -N validation_smoothabs
+#PBS -q hera
+#PBS -l nodes=1:ppn=8
+#PBS -l walltime=48:00:00
+#PBS -l vmem=250g
+#PBS -l mem=250g
+#PBS -j oe
+#PBS -o /lustre/aoc/projects/hera/Validation/test-4.0.0/logs/smooth_abscal.out
+#PBS -m e
+#PBS -M nkern@berkeley.edu
+
+# This is intended to be run on the heramgr account.
+date
+source ~/.bashrc
+conda activate validation
+
+# Finish setup.
+declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
+declare datadir=$testdir/data/visibilities/abscal_model
+declare datafile="zen.2451545.*.abscal.model.uvh5"
+declare tol=0.00001
+declare gain=0.9
+declare skip_wgt=0.2
+declare edgecut_low=50
+declare edgecut_hi=50
+declare maxiter=100
+declare min_dly=150
+declare horizon=1.0
+declare standoff=50
+declare window='tukey'
+declare alpha=0.2
+
+# Make sure the tools are up to date and switch to the right directory.
+cd ~/hera_software/hera-validation
+declare branches=$(git branch)
+declare remotes=$(git branch -r)
+if [[ " ${branches[@]} " =~ "test-4.0.0" ]]; then
+    git checkout test-4.0.0
+    git pull origin test-4.0.0
+elif [[ " ${remotes[@]} " =~ "test-4.0.0" ]]; then
+    git checkout --track origin/test-4.0.0
+fi
+cd test-series/4
+
+echo "python -m tools.smooth_abscal_model ${datadir} ${datafile} ${tol} ${gain} ${skip_wgt} ${edgecut_low} ${edgecut_hi} ${maxiter} ${min_dly} ${horizon} ${standoff} ${window} ${alpha}"
+python -m tools.smooth_abscal_model ${datadir} ${datafile} ${tol} ${gain} ${skip_wgt} ${edgecut_low} ${edgecut_hi} ${maxiter} ${min_dly} ${horizon} ${standoff} ${window} ${alpha}
+
+# Update permissions.
+chmod ug+r $savedir/*
+date
