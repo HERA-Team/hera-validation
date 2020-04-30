@@ -506,7 +506,7 @@ def apply_systematics(
 
 # ------- Functions for preparing files ------- #
 
-def adjust_sim_to_data(sim_file, data_files, verbose=False):
+def adjust_sim_to_data(sim_file, data_files, lst_min=1, lst_max=11, verbose=False):
     """
     Modify simulated data to be consistent with an observation's metadata.
     
@@ -516,6 +516,10 @@ def adjust_sim_to_data(sim_file, data_files, verbose=False):
         Path to simulation file to modify.
     data_files : array-like of str or path-like objects
         Collection of paths to observed data.
+    lst_min : float, optional
+        Minimum LST to keep, in hours. Default is 1.
+    lst_max : float, optional
+        Maximum LST to keep, in hours. Default is 11.
 
     Returns
     -------
@@ -547,6 +551,19 @@ def adjust_sim_to_data(sim_file, data_files, verbose=False):
     data_files = _listify(data_files)
     ref_uvd = UVData()
     ref_uvd.read(data_files, read_data=False)
+
+    # Keep only lsts in the specified range, but *do not sort*
+    ref_time_to_lst_map = {
+        ref_time : ref_lst 
+        for ref_time, ref_lst in zip(ref_uvd.time_array, ref_uvd.lst_array)
+    }
+    ref_times = np.array(list(ref_time_to_lst_map.keys()))
+    ref_lsts = np.array(list(ref_time_to_lst_map.values()))
+    ref_lsts *= units.day.to('hr') / (2 * np.pi) # Convert to hours
+    times_to_keep = ref_times[
+        np.logical_and(lst_min <= ref_lsts, ref_lsts <= lst_max)
+    ]
+    ref_uvd.select(times=times_to_keep)
     
     # Load in the simulation data, but only the linear vispols.
     use_pols = [polstr2num(pol) for pol in ('xx', 'yy')]
@@ -581,6 +598,8 @@ def prepare_sim_files(
     save_dir, 
     sky_cmp=None,
     systematics_params=None, 
+    lst_min=1,
+    lst_max=11,
     save_truth=True,
     clobber=True,
     verbose=True
@@ -603,6 +622,10 @@ def prepare_sim_files(
         Dictionary mapping systematics names (i.e. 'noise', 'gains') to 
         a dictionary of parameters to use for generating the systematic.
         Default is to not simulate/apply systematics.
+    lst_min : float, optional
+        Minimum LST to keep, in hours. Default is 1.
+    lst_max : float, optional
+        Maximum LST to keep, in hours. Default is 11.
     save_truth : bool, optional
         Whether to save the true visibilities. Default is True.
     clobber : bool, optional
@@ -626,7 +649,9 @@ def prepare_sim_files(
         return
 
     # Modify the simulation data to match the reference metadata.
-    sim_uvd = adjust_sim_to_data(sim_file, data_files, verbose=verbose)
+    sim_uvd = adjust_sim_to_data(
+        sim_file, data_files, lst_min=lst_min, lst_max=lst_max, verbose=verbose
+    )
 
     # Chunk the simulation data and write to disk.
     if write_truth:
@@ -827,7 +852,7 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     loop_iterable = zip(ref_to_sim_time_map.values(), ref_times, ref_lsts)
     for times, ref_lst in zip(ref_to_sim_time_map.items(), ref_lsts):
         ref_time, sim_time = times
-        blt_slice = np.argwhere(sim_uvd.time_array == sim_time)
+        blt_slice = np.argwhere(sim_uvd.time_array == sim_time).flatten()
         new_sim_lsts[blt_slice] = ref_lst
         new_sim_times[blt_slice] = ref_time
     sim_uvd.time_array = new_sim_times
@@ -1087,6 +1112,12 @@ def sim_prep_argparser():
     file_opts.add_argument("simfile", type=str, help="Simulation file to be modified.")
     file_opts.add_argument("obsdir", type=str, help="Directory containing observation files.")
     file_opts.add_argument("savedir", type=str, help="Destination to write modified files.")
+    file_opts.add_argument(
+        "--lst_min", type=float, default=1, help="Minimum LST to keep, in hours."
+    )
+    file_opts.add_argument(
+        "--lst_max", type=float, default=11, help="Maximum LST to keep, in hours."
+    )
     file_opts.add_argument(
         "--skip_truth", default=False, action="store_true",
         help="Skip writing the true visibilities to disk; only write corrupted."

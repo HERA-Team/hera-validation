@@ -61,7 +61,8 @@ for N in range(a.Nchunks):
     obsfile_chunk = obsfiles[N * chunk_len : (N+1) * chunk_len]
     sim_prep.prepare_sim_files(
         a.simfile, obsfile_chunk, a.savedir, systematics_params=systematics_params, 
-        save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
+        lst_min=a.lst_min, lst_max=a.lst_max, save_truth=not a.skip_truth, 
+        clobber=a.clobber, verbose=a.verbose
     )
     with open(new_config, 'r') as cfg:
         systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
