@@ -298,6 +298,7 @@ def add_xtalk(
             sim.data_array[this_slice] += gen_xtalk(
                 autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
             )
+        del autovis
 
     if ret_cmp:
         sim.data_array += xtalk
@@ -319,6 +320,7 @@ def apply_gains(sim, gains, time_vary_params=None):
         sim.data_array[this_slice] = hera_sim.sigchain.apply_gains(
             vis, gains, antpairpol[:2]
         )
+        del vis
     return
 
 def vary_gains_in_time(
@@ -901,6 +903,9 @@ def chunk_sim_and_save(
         # Chunk it and write to disk.
         this_uvd = sim_uvd.select(times=times, inplace=False)
         this_uvd.write_uvh5(save_path, clobber=clobber)
+
+        # Delete the temporary UVData object to speed things up a bit.
+        del this_uvd
     return
 
 def save_config(config, ref_file, save_dir, sky_cmp, clobber=True):
