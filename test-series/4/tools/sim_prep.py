@@ -295,7 +295,7 @@ def add_xtalk(
                 autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
             )
         else:
-            sim.data_array[this_slice] = gen_xtalk(
+            sim.data_array[this_slice] += gen_xtalk(
                 autovis, freqs_GHz, amps * damps, dlys + ddlys, phs
             )
 
@@ -1105,3 +1105,25 @@ def abscal_model_argparser():
     a.add_argument("--verbose", default=False, action="store_true", help="Print progress.")
     args = a.parse_args()
     return args
+
+
+def smooth_abscal_model_argparser():
+    """Argparser for smoothing the abscal model."""
+    desc = "Smooth abscal model."
+    a = argparse.ArgumentParser(description=desc)
+    a.add_argument("datadir", type=str, help="Data dir location and savedir")
+    a.add_argument("datafile", type=str, help="Glob-parseable field for data files")
+    a.add_argument("tol", type=float, help="clean tol")
+    a.add_argument("gain", type=float, help="clean gain")
+    a.add_argument("skip_wgt", type=float, help="clean skip_wgt")
+    a.add_argument("edgecut_low", type=int, help="clean edgecut_low")
+    a.add_argument("edgecut_hi", type=int, help="clean edgecut_hi")
+    a.add_argument("maxiter", type=int, help="clean maxiter")
+    a.add_argument("min_dly", type=float, help="clean min_dly")
+    a.add_argument("horizon", type=float, help="clean horizon")
+    a.add_argument("standoff", type=float, help="clean standoff")
+    a.add_argument("window", type=str, help="clean window")
+    a.add_argument("alpha", type=float, help="clean alpha")
+    args = a.parse_args()
+    return args
+                     
