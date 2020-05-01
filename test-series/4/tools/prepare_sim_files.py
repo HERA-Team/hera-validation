@@ -33,6 +33,7 @@ a = sim_prep.sim_prep_argparser()
 # This will need to be updated for future validation tests,
 # as naming conventions have changed since H1C!
 obsfiles = sorted(glob.glob(os.path.join(a.obsdir, "*.HH.uvh5")))
+obsfiles = sim_prep._apply_lst_cut(obsfiles, a.lst_min, a.lst_max)
 if a.config is not None:
     with open(a.config, 'r') as cfg:
         systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
@@ -40,9 +41,10 @@ if a.config is not None:
 # Load in some things necessary for doing fileprep in chunks (which is 
 # necessary for large files)
 jd_pattern = re.compile('[0-9]{7}.[0-9]{5}')
-start_jd, end_jd = (
-    float(jd_pattern.findall(f)[0]) for f in (obsfiles[0], obsfiles[-1])
-)
+start_jd = float(jd_pattern.findall(obsfiles[0])[0])
+uvd = UVData()
+uvd.read(obsfiles[-1], read_data=False)
+end_jd = uvd.time_array.max()
 jd = int(start_jd)
 sky_cmp = sim_prep._parse_filename_for_cmp(a.simfile)
 new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
@@ -61,8 +63,7 @@ for N in range(a.Nchunks):
     obsfile_chunk = obsfiles[N * chunk_len : (N+1) * chunk_len]
     sim_prep.prepare_sim_files(
         a.simfile, obsfile_chunk, a.savedir, systematics_params=systematics_params, 
-        lst_min=a.lst_min, lst_max=a.lst_max, save_truth=not a.skip_truth, 
-        clobber=a.clobber, verbose=a.verbose
+        save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
     )
     with open(new_config, 'r') as cfg:
         systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)

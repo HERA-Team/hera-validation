@@ -582,8 +582,6 @@ def prepare_sim_files(
     save_dir, 
     sky_cmp=None,
     systematics_params=None, 
-    lst_min=0,
-    lst_max=24,
     save_truth=True,
     clobber=True,
     verbose=True
@@ -606,10 +604,6 @@ def prepare_sim_files(
         Dictionary mapping systematics names (i.e. 'noise', 'gains') to 
         a dictionary of parameters to use for generating the systematic.
         Default is to not simulate/apply systematics.
-    lst_min : float, optional
-        Minimum LST to keep, in hours. Default is 0.
-    lst_max : float, optional
-        Maximum LST to keep, in hours. Default is 24.
     save_truth : bool, optional
         Whether to save the true visibilities. Default is True.
     clobber : bool, optional
@@ -632,9 +626,6 @@ def prepare_sim_files(
         print("No new files to make; returning.")
         return
 
-    # Choose which files to keep based on desired LST cuts.
-    data_files = _apply_lst_cut(data_files, lst_min, lst_max)
-    
     # Modify the simulation data to match the reference metadata.
     sim_uvd = adjust_sim_to_data(sim_file, data_files, verbose=verbose)
 
@@ -1146,10 +1137,10 @@ def sim_prep_argparser():
     file_opts.add_argument("obsdir", type=str, help="Directory containing observation files.")
     file_opts.add_argument("savedir", type=str, help="Destination to write modified files.")
     file_opts.add_argument(
-        "--lst_min", type=float, default=1, help="Minimum LST to keep, in hours."
+        "--lst_min", type=float, default=0, help="Minimum LST to keep, in hours."
     )
     file_opts.add_argument(
-        "--lst_max", type=float, default=11, help="Maximum LST to keep, in hours."
+        "--lst_max", type=float, default=24, help="Maximum LST to keep, in hours."
     )
     file_opts.add_argument(
         "--skip_truth", default=False, action="store_true",
