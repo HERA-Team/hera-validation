@@ -1161,6 +1161,10 @@ def sim_prep_argparser():
         "--lst_max", type=float, default=24, help="Maximum LST to keep, in hours."
     )
     file_opts.add_argument(
+        "--uniformly_sampled", default=False, action="store_true",
+        help="Whether the reference files in ``obsdir`` uniformly sample in LST."
+    )
+    file_opts.add_argument(
         "--skip_truth", default=False, action="store_true",
         help="Skip writing the true visibilities to disk; only write corrupted."
     )
