@@ -33,7 +33,7 @@ a = sim_prep.sim_prep_argparser()
 # This will need to be updated for future validation tests,
 # as naming conventions have changed since H1C!
 obsfiles = sorted(glob.glob(os.path.join(a.obsdir, "*.HH.uvh5")))
-if a.lst_min != 0 and a.lst_max != 24:
+if a.lst_min != 0 or a.lst_max != 24:
     obsfiles = sim_prep._apply_lst_cut(
         obsfiles, a.lst_min, a.lst_max, uniformly_sampled=a.uniformly_sampled
     )
