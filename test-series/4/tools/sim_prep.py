@@ -943,7 +943,7 @@ def save_config(config, ref_file, save_dir, sky_cmp, clobber=True):
         Whether to overwrite any existing files that share the new 
         filenames. Default is to overwrite files.
     """
-    jd_pattern = re.compile("[0-9]{7}")
+    jd_pattern = re.compile("[0-9]{7}.[0-9]{5}")
     jd = jd_pattern.findall(ref_file)[0]
     filename = f"{jd}.config.{sky_cmp}.yaml"
     save_path = os.path.join(save_dir, filename)

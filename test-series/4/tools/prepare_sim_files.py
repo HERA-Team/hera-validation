@@ -50,7 +50,6 @@ uvd.read(obsfiles[-1], read_data=False)
 end_jd = uvd.time_array.max()
 jd = int(start_jd)
 sky_cmp = sim_prep._parse_filename_for_cmp(a.simfile)
-new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
 chunk_len = int(np.ceil(len(obsfiles) / a.Nchunks))
 time_vary_params = systematics_params.get('gains', {}).get('time_vary_params', None)
 if a.Nchunks > 1 and time_vary_params is not None:
@@ -68,6 +67,10 @@ for N in range(a.Nchunks):
         a.simfile, obsfile_chunk, a.savedir, systematics_params=systematics_params, 
         save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
     )
+    jd = jd_pattern.findall(obsfile_chunk[0])[0]
+    new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
     with open(new_config, 'r') as cfg:
         systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
-
+    # Ensure that the noise realization is unique.
+    if 'noise' in systematics_params.keys():
+        systematics_params['noise']['seed'] = 'random'
