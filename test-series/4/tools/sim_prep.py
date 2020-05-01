@@ -1076,7 +1076,7 @@ def _sim_files_exist(data_files, save_dir, sky_cmp, state):
     ]
     return all(os.path.exists(sim_file) for sim_file in sim_files)
 
-def _apply_lst_cut(file_glob, lst_min, lst_max):
+def _apply_lst_cut(file_glob, lst_min, lst_max, uniformly_sampled=True):
     """
     Choose a subset of files so that only the specified range of LSTs remain.
     
@@ -1089,6 +1089,11 @@ def _apply_lst_cut(file_glob, lst_min, lst_max):
         Lower bound of LST range to keep, in units of hours.
     lst_max : float
         Upper bound of LST range to keep, in units of hours.
+    uniformly_sampled : bool, optional
+        Whether the files are uniformly sampled with the same number of 
+        integrations per file. Default assumption is that they are uniform.
+        If this is not true, then the file downselection may be very slow, 
+        since the entire file glob is read.
 
     Returns
     -------
@@ -1098,6 +1103,7 @@ def _apply_lst_cut(file_glob, lst_min, lst_max):
     """
     # Ensure the files are sorted.
     data_files = sorted(file_glob)
+    Nfiles = len(data_files)
 
     # Extract parameters necessary for determining the duration of a single file.
     uvd = UVData()
@@ -1106,22 +1112,34 @@ def _apply_lst_cut(file_glob, lst_min, lst_max):
     Nint_per_file = uvd.Ntimes
     
     # Determine which times correspond to LSTs in the desired LST range.
-    uvd = UVData()
-    uvd.read(data_files, read_data=False)
-    time_to_lst_map = {time : lst for time, lst in zip(uvd.time_array, uvd.lst_array)}
-    times = np.array(list(time_to_lst_map.keys()))
-    lsts = np.array(list(time_to_lst_map.values()))
-    lsts *= units.day.to('hr') / (2 * np.pi) # Convert to hours
-    times_to_keep = times[np.logical_and(lst_min <= lsts, lsts <= lst_max)]
-
-    # Actually apply the cut and return the trimmed file glob.
-    tmin, tmax = times_to_keep.min(), times_to_keep.max()
-    jd_pattern = re.compile('[0-9]{7}.[0-9]{5}')
-    jds = [float(jd_pattern.findall(dfile)[0]) for dfile in data_files]
-    data_files = sorted([
-        data_files[index] for index, jd in enumerate(jds) 
-        if tmin <= jd and jd + (dt * Nint_per_file) <= tmax
-    ])
+    if uniformly_sampled:
+        uvd = UVData()
+        uvd.read(data_files[0], read_data=False)
+        lst0 = uvd.lst_array[0]
+        unique_lsts = np.unique(uvd.lst_array)
+        unique_lsts[unique_lsts < unique_lsts[0]] += 2 * np.pi # unwrap LSTs
+        dlst = np.median(np.diff(unique_lsts))
+        file_lst_span = dlst * uvd.Ntimes
+        start_lsts = lst0 + file_lst_span * np.arange(Nfiles)
+        start_lsts_hr = (start_lsts * units.day.to('hr') / (2 * np.pi)) % 24
+        data_files = sorted([
+            dfile for dfile, start_lst in zip(data_files, start_lsts_hr)
+            if lst_min <= start_lst and start_lst <= lst_max
+        ])
+    else:
+        # Need to do it slowly; check files individually in case unevenly spaced.
+        files_to_keep = []
+        for dfile in data_files:
+            uvd = UVData()
+            uvd.read(dfile, read_data=False)
+            lsts_hr = np.unique(uvd.lst_array) * units.day.to('hr') / (2 * np.pi)
+            keep_file = np.all(
+                np.logical_and(lst_min <= lsts_hr, lsts_hr <= lst_max)
+            )
+            if keep_file:
+                files_to_keep.append(dfile)
+            del uvd
+        data_files = sorted(files_to_keep)
     return data_files
 
 # ------- Argparsers ------- #
