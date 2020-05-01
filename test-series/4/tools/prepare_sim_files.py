@@ -27,6 +27,7 @@ import sys
 import yaml
 
 import numpy as np
+from pyuvdata import UVData
 from . import sim_prep
 
 a = sim_prep.sim_prep_argparser()
