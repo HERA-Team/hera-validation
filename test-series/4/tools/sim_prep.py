@@ -1115,16 +1115,15 @@ def _apply_lst_cut(file_glob, lst_min, lst_max, uniformly_sampled=True):
     if uniformly_sampled:
         uvd = UVData()
         uvd.read(data_files[0], read_data=False)
-        lst0 = uvd.lst_array[0]
+        lst0 = uvd.lst_array[0] * units.day.to('hr') / (2 * np.pi)
         unique_lsts = np.unique(uvd.lst_array)
         unique_lsts[unique_lsts < unique_lsts[0]] += 2 * np.pi # unwrap LSTs
-        dlst = np.median(np.diff(unique_lsts))
+        dlst = np.median(np.diff(unique_lsts)) * units.day.to('hr') / (2 * np.pi)
         file_lst_span = dlst * uvd.Ntimes
-        start_lsts = lst0 + file_lst_span * np.arange(Nfiles)
-        start_lsts_hr = (start_lsts * units.day.to('hr') / (2 * np.pi)) % 24
+        start_lsts = (lst0 + file_lst_span * np.arange(Nfiles)) % 24
         data_files = sorted([
             dfile for dfile, start_lst in zip(data_files, start_lsts_hr)
-            if lst_min <= start_lst and start_lst <= lst_max
+            if lst_min <= start_lst and start_lst + file_lst_span <= lst_max
         ])
     else:
         # Need to do it slowly; check files individually in case unevenly spaced.
