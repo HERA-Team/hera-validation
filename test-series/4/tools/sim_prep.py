@@ -1122,7 +1122,7 @@ def _apply_lst_cut(file_glob, lst_min, lst_max, uniformly_sampled=True):
         file_lst_span = dlst * uvd.Ntimes
         start_lsts = (lst0 + file_lst_span * np.arange(Nfiles)) % 24
         data_files = sorted([
-            dfile for dfile, start_lst in zip(data_files, start_lsts_hr)
+            dfile for dfile, start_lst in zip(data_files, start_lsts)
             if lst_min <= start_lst and start_lst + file_lst_span <= lst_max
         ])
     else:
