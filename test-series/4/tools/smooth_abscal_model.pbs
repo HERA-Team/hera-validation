@@ -19,7 +19,7 @@ conda activate validation
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare datadir=$testdir/data/visibilities/abscal_model
 declare datafile="zen.2451545.*.abscal.model.uvh5"
-declare tol=0.00001
+declare tol=0.0000001
 declare gain=0.9
 declare skip_wgt=0.2
 declare edgecut_low=50
