@@ -29,7 +29,7 @@ declare savedir=$testdir/data/visibilities/abscal_model
 declare Nint_per_file=60
 declare lst_min=0
 declare lst_max=12
-declare Nchunks=2 # Process in batches of 6 hours each
+declare Nchunks=4 # Process in batches of 3 hours each
 
 # Make sure the tools are up to date and switch to the right directory.
 cd ~/hera_software/hera-validation
