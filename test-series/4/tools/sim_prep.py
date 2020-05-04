@@ -486,6 +486,7 @@ def apply_systematics(
         'reflections' : reflections,
         'xtalk' : xtalk
     }
+  
     # Update random seeds in case user wants to "randomly" generate seeds.
     for params in parameters.values():
         if params is not None and 'seed' in params.keys():
@@ -498,8 +499,12 @@ def apply_systematics(
     systematics = {} if return_systematics else None
     sim = _sim_to_uvd(sim)
     for systematic, params in parameters.items():
+        if params is None:
+            continue
         if verbose:
-            print(f"Simulating and applying {systematic}...")
+            print(f"Simulating and applying {systematic} with parameters:")
+            for param, value in params.items():
+                print(f"{param} : {value}")
         # This is a bit of a hack, but I can't think of a better way...
         add_systematic = SYSTEMATICS_SIMULATORS[systematic]
         if return_systematics:
@@ -648,7 +653,11 @@ def prepare_sim_files(
         # TODO: update this to handle being able to save the systematics
         # but maybe raise a warning if the task may cause a MemoryError
         if verbose:
-            print("Simulating and applying systematics...")
+            print("Simulating and applying systematics, using parameters:")
+            for systematic, params in systematics_params.items():
+                print(f"{systematic}:")
+                for param, value in params.items():
+                    print(f"{param} : {value}")
         sim_uvd, systematics, params = apply_systematics(
             sim_uvd, return_systematics=False, verbose=verbose, 
             **systematics_params
