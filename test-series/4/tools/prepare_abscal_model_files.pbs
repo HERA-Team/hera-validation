@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N validation_fileprep
+#PBS -N validation_abscal_model_prep
 #PBS -q hera
 #PBS -l nodes=1:ppn=1
 #PBS -l walltime=48:00:00
