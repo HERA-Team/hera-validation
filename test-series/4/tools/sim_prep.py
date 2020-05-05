@@ -43,9 +43,6 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     if not isinstance(sim, Simulator):
         sim = Simulator(data=sim)
 
-    # TODO: update how the interpolation objects are made
-    # The current implementation does not work with phase wraps!
-    # quick and dirty solution
     original_lsts = copy.deepcopy(sim.data.lst_array)
     unwrapped_lsts = sim.data.lst_array
     unwrapped_lsts[unwrapped_lsts < unwrapped_lsts[0]] += 2 * np.pi
@@ -456,12 +453,72 @@ def apply_systematics(
     gains=None, 
     reflections=None,
     xtalk=None,
-    return_systematics=True,
+    return_systematics=False,
     verbose=False
 ):
     """One-stop shop for applying systematics to a simulation.
 
-    # TODO: docstring
+    This function handles the application of a handful of systematic 
+    effects, provided appropriate parameters for simulating the 
+    desired set of systematics. For more information on how the 
+    systematics are simulated, please see the lower-level ``add_x`` 
+    functions and their documentation.
+
+    Parameters
+    ----------
+    sim : :class:`pyuvdata.UVData`
+        Simulation object containing simulation data/metadata. May be 
+        a subclass thereof, or something that may be converted to a 
+        :class:`pyuvdata.UVData` object (such as a path to a file).
+    seed : {int, None, or 'random'}, optional
+        The random seed. If None, then this parameter is ignored. If 
+        'random', then a seed is generated from the system time. See 
+        :func:`_gen_seed` for details. Default is to not use a seed. 
+        If this is specified, then it is used as the default seed for 
+        any systematics that do not have their `seed` parameter defined. 
+    noise : dict, optional
+        Dictionary of parameters for simulating noise. See :func:`add_noise` 
+        for further information. Default is to not simulate noise.
+    gains : dict, optional
+        Dictionary of parameters for simulating bandpass gains. See 
+        :func:`add_gains` for further information. Default is to not 
+        simulate bandpass gains.
+    reflections : dict, optional
+        Dictionary of parameters for simulating cable reflections. See 
+        :func:`add_reflections` for further information. Default is to 
+        not simulate cable reflections.
+    xtalk : dict, optional
+        Dictionary of parameters for simulating cross-coupling crosstalk. 
+        See :func:`add_xtalk` for further information. Default is to not 
+        simulate crosstalk.
+    return_systematics : bool, optional
+        Whether to return the simulated systematics. If True, then 
+        systematics are returned as a dictionary, with the names of the 
+        systematics as the keys. The values are either data arrays (in the 
+        format of :class:`pyuvdata.UVData` data arrays) or dictionaries 
+        mapping antennas to gains, depending on the systematic. (Noise 
+        and crosstalk are visibility-like, so they are returned as data 
+        arrays; reflections and bandpass gains are per-antenna quantities, 
+        which are optionally time-dependent, and so are returned as mappings 
+        from antenna numbers to gains.) Default is to not return systematics. 
+        !! WARNING !! If you are simulating effects for large data arrays, 
+        then enabling this feature may potentially result in a memory 
+        overflow!
+    verbose : bool, optional
+        Whether to print statements tracking the progress of the systematics 
+        simulation and application. Primarily used for debugging. Default 
+        is to not print updates.
+
+    Returns
+    -------
+    corrupted_sim : :class:`pyuvdata.UVData`
+        Simulation with systematics applied.
+    systematics : dict
+        Dictionary mapping systematics to their data arrays or gain 
+        dictionaries. None is returned if ``return_systematics`` is False.
+    parameters : dict
+        Dictionary mapping systematic names to simulation parameters 
+        required to reconstruct the simulated systematic effects.
     """
     # If sim components are specified, initialize parameter dictionaries.
     # This allows users to pass an empty dictionary and use the same 
@@ -489,8 +546,8 @@ def apply_systematics(
   
     # Update random seeds in case user wants to "randomly" generate seeds.
     for params in parameters.values():
-        if params is not None and 'seed' in params.keys():
-            params['seed'] = _gen_seed(params['seed'])
+        if params is not None:
+            params['seed'] = _gen_seed(params.get('seed', seed))
 
     # Apply the systematics and track the results.
     # Simulating this and keeping all the systematics may be very 
