@@ -541,17 +541,24 @@ def apply_systematics(
         if params is None:
             continue
         if verbose:
-            print(f"{systematic} params:")
+            print(f"Simulating {systematic}.")
+            print(f"\tParams:")
             for param, value in params.items():
-                print(f"\t{param} : {value}")
+                print(f"\t\t{param} : {value}")
         # This is a bit of a hack, but I can't think of a better way...
         t = time.time()
         add_systematic = SYSTEMATICS_SIMULATORS[systematic]
+        print("\tSample of vis before systematic: ", np.min(sim.data.data_array), np.mean(sim.data.data_array), np.max(sim.data.data_array))
+
         if return_systematics:
             sim, systematics[systematic] = add_systematic(sim, ret_cmp=True, **params)
         else:
             sim = add_systematic(sim, ret_cmp=False, **params)
-        print(f"... done in {time.time() - t} sec.")
+
+        print("\tSample of vis after systematic: ", np.min(sim.data.data_array),
+              np.mean(sim.data.data_array), np.max(sim.data.data_array))
+
+        print(f"\t... done in {time.time() - t} sec.")
 
     return sim, systematics, parameters
 
