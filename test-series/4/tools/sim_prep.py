@@ -78,11 +78,11 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
 
     print('omega_p: ', omega_p)
     print('sky_model: ', xx_autos_interp(freqs_GHz, lsts).max())
-    for slice,interp in ((xx_slice, xx_autos_interp), (yy_slice, yy_autos_interp)):
-        noise[slice] += sim.add_noise(
+    for slc,interp in ((xx_slice, xx_autos_interp), (yy_slice, yy_autos_interp)):
+        noise[slc] += sim.add_noise(
             'thermal_noise', Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
             ret_vis=True, add_vis=False
-        )[slice]
+        )[slc]
 
     if ret_cmp:
         sim.data.data_array += noise
