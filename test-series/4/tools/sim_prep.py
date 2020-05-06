@@ -4,6 +4,7 @@ import os
 import re
 import time
 import yaml
+import time
 
 import numpy as np
 from astropy import units
@@ -546,16 +547,17 @@ def apply_systematics(
         if params is None:
             continue
         if verbose:
-            print(f"Simulating and applying {systematic} with parameters:")
+            print(f"{systematic} params:")
             for param, value in params.items():
-                print(f"{param} : {value}")
+                print(f"\t{param} : {value}")
         # This is a bit of a hack, but I can't think of a better way...
+        t = time.time()
         add_systematic = SYSTEMATICS_SIMULATORS[systematic]
         if return_systematics:
             sim, systematics[systematic] = add_systematic(sim, ret_cmp=True, **params)
         else:
             sim = add_systematic(sim, ret_cmp=False, **params)
-
+        print(f"... done in {time.time() - t} sec.")
 
     return sim, systematics, parameters
 
@@ -697,21 +699,28 @@ def prepare_sim_files(
         # TODO: update this to handle being able to save the systematics
         # but maybe raise a warning if the task may cause a MemoryError
         if verbose:
-            print("Simulating and applying systematics, using parameters:")
-            for systematic, params in systematics_params.items():
-                print(f"{systematic}:")
-                for param, value in params.items():
-                    print(f"{param} : {value}")
+            print("Simulating and applying systematics.")
+            print("====================================")
+#            for systematic, params in systematics_params.items():
+#                print(f"{systematic}:")
+#                for param, value in params.items():
+#                    print(f"\t{param} : {value}")
         sim_uvd, systematics, params = apply_systematics(
             sim_uvd, return_systematics=False, verbose=verbose, 
             **systematics_params
         )
+        print('==================================')
+        
         if verbose:
-            print("Writing corrupted visibilities to disk...")
+            print("Writing corrupted visibilities to disk...", end='')
+
+        t = time.time()
         chunk_sim_and_save(
             sim_uvd, save_dir, ref_files=data_files, 
             sky_cmp=sky_cmp, state='corrupt', clobber=clobber
         )
+        print(f" done in {time.time() - t} sec")
+        
         if verbose:
             print("Writing sysytematics parameters to disk...")
         save_config(params, data_files[0], save_dir, sky_cmp, clobber)
