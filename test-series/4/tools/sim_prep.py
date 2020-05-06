@@ -73,26 +73,19 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     if seed is not None:
         seed = _gen_seed(seed)
         np.random.seed(seed)
+
+    noise = np.zeros_like(sim.data.data_array, dtype=np.complex) if ret_cmp else sim.data.data_array
+
+    print('omega_p: ', omega_p)
+    print('sky_model: ', xx_autos_interp(freqs_GHz, lsts).max())
+    for slice,interp in ((xx_slice, xx_autos_interp), (yy_slice, yy_autos_interp)):
+        noise[slice] += sim.add_noise(
+            'thermal_noise', Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
+            ret_vis=True, add_vis=False
+        )[slice]
+
     if ret_cmp:
-        noise = np.zeros_like(sim.data.data_array, dtype=np.complex)
-        noise[xx_slice] += sim.add_noise(
-            'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
-            ret_vis=True, add_vis=False
-        )[xx_slice]
-        noise[yy_slice] += sim.add_noise(
-            'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
-            ret_vis=True, add_vis=False
-        )[yy_slice]
         sim.data.data_array += noise
-    else:
-        sim.data.data_array[xx_slice] += sim.add_noise(
-            'thermal_noise', Tsky_mdl=xx_autos_interp, Trx=Trx, omega_p=omega_p,
-            ret_vis=True, add_vis=False
-        )[xx_slice]
-        sim.data.data_array[yy_slice] += sim.add_noise(
-            'thermal_noise', Tsky_mdl=yy_autos_interp, Trx=Trx, omega_p=omega_p,
-            ret_vis=True, add_vis=False
-        )[yy_slice]
 
     # Return simulation LSTs back to their original form, then return results.
     sim.data.lst_array = original_lsts
@@ -101,6 +94,7 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
         return sim, noise
     else:
         return sim
+
 
 def add_gains(
     sim, 
