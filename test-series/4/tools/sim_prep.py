@@ -91,9 +91,9 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     sim.data.lst_array = original_lsts
     
     if ret_cmp:
-        return sim, noise
+        return _sim_to_uvd(sim), noise
     else:
-        return sim
+        return _sim_to_uvd(sim)
 
 
 def add_gains(
@@ -548,15 +548,15 @@ def apply_systematics(
         # This is a bit of a hack, but I can't think of a better way...
         t = time.time()
         add_systematic = SYSTEMATICS_SIMULATORS[systematic]
-        print("\tSample of vis before systematic: ", np.min(sim.data.data_array), np.mean(sim.data.data_array), np.max(sim.data.data_array))
+        print("\tSample of vis before systematic: ", np.min(sim.data_array), np.mean(sim.data_array), np.max(sim.data_array))
 
         if return_systematics:
             sim, systematics[systematic] = add_systematic(sim, ret_cmp=True, **params)
         else:
             sim = add_systematic(sim, ret_cmp=False, **params)
 
-        print("\tSample of vis after systematic: ", np.min(sim.data.data_array),
-              np.mean(sim.data.data_array), np.max(sim.data.data_array))
+        print("\tSample of vis after systematic: ", np.min(sim.data_array),
+              np.mean(sim.data_array), np.max(sim.data_array))
 
         print(f"\t... done in {time.time() - t} sec.")
 
