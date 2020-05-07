@@ -18,6 +18,7 @@ from hera_cal.abscal import get_d2m_time_map
 from hera_cal.io import to_HERAData
 from hera_cal.utils import lst_rephase
 from hera_sim import Simulator
+from hera_sim.noise import thermal_noise
 
 import hera_sim
 if hera_sim.version.version.startswith('0'):
