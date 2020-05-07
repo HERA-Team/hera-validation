@@ -41,15 +41,14 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
         The random seed. Not used if not specified. Use value 'random' 
         to have a seed automatically generated.
     """
-    if not isinstance(sim, Simulator):
-        sim = Simulator(data=sim)
+    sim = _sim_to_uvd(sim)
 
-    original_lsts = copy.deepcopy(sim.data.lst_array)
-    unwrapped_lsts = sim.data.lst_array
+    original_lsts = copy.deepcopy(sim.lst_array)
+    unwrapped_lsts = sim.lst_array
     unwrapped_lsts[unwrapped_lsts < unwrapped_lsts[0]] += 2 * np.pi
     lsts = np.unique(unwrapped_lsts)
     sim.data.lst_array = unwrapped_lsts
-    freqs = np.unique(sim.data.freq_array)
+    freqs = np.unique(sim.freq_array)
     freqs_GHz = freqs / 1e9  # GHz
 
     # Find out which antenna has the autocorrelation data, in case we
@@ -60,40 +59,33 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     beam_poly = np.load(os.path.join(DATA_PATH, "RIMEz_beam_poly.npy"))
     omega_p = np.polyval(beam_poly, freqs_GHz)
     Jy_to_K = hera_sim.noise.jy2T(freqs_GHz, omega_p) / 1000
-    xx_autos = sim.data.get_data(*antpair, 'xx') * Jy_to_K[None, :]
-    xx_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, xx_autos.real)
-    yy_autos = sim.data.get_data(*antpair, 'yy') * Jy_to_K[None, :]
-    yy_autos_interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, yy_autos.real)
 
-    # Generate noise for each polarization separately.
-    blts, _, xx_pol_ind = sim.data._key2inds('xx')
-    _, _, yy_pol_ind = sim.data._key2inds('yy')
-    xx_slice = (blts, 0, slice(None), xx_pol_ind[0])
-    yy_slice = (blts, 0, slice(None), yy_pol_ind[0])
     if seed is not None:
         seed = _gen_seed(seed)
         np.random.seed(seed)
 
-    noise = np.zeros_like(sim.data.data_array, dtype=np.complex) if ret_cmp else sim.data.data_array
+    noise = np.zeros_like(sim.data_array, dtype=np.complex) if ret_cmp else sim.data_array
 
-    print('omega_p: ', omega_p)
-    print('sky_model: ', xx_autos_interp(freqs_GHz, lsts).max())
-    for slc,interp in ((xx_slice, xx_autos_interp), (yy_slice, yy_autos_interp)):
-        noise[slc] += sim.add_noise(
-            'thermal_noise', Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
-            ret_vis=True, add_vis=False
-        )[slc]
+    for pol in ('xx', 'yy'):
+        autos = sim.get_data(*antpair, pol) * Jy_to_K[None, :]
+        interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, autos.real)
+        blts, _, indx = sim._key2inds(pos)
+
+        for blt in blts:
+            noise[blt, 0, :, indx] += thermal_noise(
+                lsts=lsts, fqs=freqs_GHz, Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
+            )
 
     if ret_cmp:
-        sim.data.data_array += noise
+        sim.data_array += noise
 
     # Return simulation LSTs back to their original form, then return results.
-    sim.data.lst_array = original_lsts
+    sim.lst_array = original_lsts
     
     if ret_cmp:
-        return _sim_to_uvd(sim), noise
+        return sim, noise
     else:
-        return _sim_to_uvd(sim)
+        return sim
 
 
 def add_gains(
@@ -516,7 +508,7 @@ def apply_systematics(
         required to reconstruct the simulated systematic effects.
     """
     if verbose:
-        print("Extracting systematics parameters...")
+        print("Extracting systematics parameters...\n")
 
     # Collect all of the parameters into a dictionary.
     parameters = {
@@ -541,25 +533,29 @@ def apply_systematics(
         if params is None:
             continue
         if verbose:
-            print(f"Simulating {systematic}.")
-            print(f"\tParams:")
+            print(f"Simulating {systematic}:")
+            print(f"-----------"+"-"*len(systematic))
+            print(f"Params:")
             for param, value in params.items():
-                print(f"\t\t{param} : {value}")
+                print(f"\t{param} : {value}")
+            print("Min/Mean/Max before: ", np.min(sim.data_array),
+                  np.mean(sim.data_array), np.max(sim.data_array))
+
         # This is a bit of a hack, but I can't think of a better way...
         t = time.time()
         add_systematic = SYSTEMATICS_SIMULATORS[systematic]
-        print("\tSample of vis before systematic: ", np.min(sim.data_array), np.mean(sim.data_array), np.max(sim.data_array))
 
         if return_systematics:
             sim, systematics[systematic] = add_systematic(sim, ret_cmp=True, **params)
         else:
             sim = add_systematic(sim, ret_cmp=False, **params)
 
-        print("\tSample of vis after systematic: ", np.min(sim.data_array),
-              np.mean(sim.data_array), np.max(sim.data_array))
+        if verbose:
+            print("Min/Mean/Max after: ", np.min(sim.data_array),
+                  np.mean(sim.data_array), np.max(sim.data_array))
 
-        print(f"\t... done in {time.time() - t} sec.")
-
+            print(f"Done in {time.time() - t} sec.")
+            print()
     return sim, systematics, parameters
 
 # ------- Functions for preparing files ------- #
