@@ -70,11 +70,11 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     for pol in ('xx', 'yy'):
         autos = sim.get_data(*antpair, pol) * Jy_to_K[None, :]
         interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, autos.real)
-        blts, _, indx = sim._key2inds(pol)
 
-        
-        for blt in blts:
-            noise[blt, 0, :, indx[0]] += thermal_noise(
+        for bl in sim.get_antpairs():
+            blts, _, indx = sim._key2inds(bl + (pol,))
+
+            noise[blts, 0, :, indx[0]] += thermal_noise(
                 lsts=lsts, fqs=freqs_GHz, Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
             )
 
