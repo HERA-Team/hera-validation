@@ -47,7 +47,7 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
     unwrapped_lsts = sim.lst_array
     unwrapped_lsts[unwrapped_lsts < unwrapped_lsts[0]] += 2 * np.pi
     lsts = np.unique(unwrapped_lsts)
-    sim.data.lst_array = unwrapped_lsts
+    sim.lst_array = unwrapped_lsts
     freqs = np.unique(sim.freq_array)
     freqs_GHz = freqs / 1e9  # GHz
 
