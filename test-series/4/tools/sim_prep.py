@@ -53,7 +53,7 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
 
     # Find out which antenna has the autocorrelation data, in case we
     # add noise before inflating.
-    antpair = next(ants for ants in sim.data.get_antpairs() if ants[0] == ants[1])
+    antpair = next(ants for ants in sim.get_antpairs() if ants[0] == ants[1])
 
     # Set up to use the autos to set the noise level
     beam_poly = np.load(os.path.join(DATA_PATH, "RIMEz_beam_poly.npy"))
