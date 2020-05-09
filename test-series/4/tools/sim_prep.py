@@ -700,10 +700,6 @@ def prepare_sim_files(
         if verbose:
             print("Simulating and applying systematics.")
             print("====================================")
-#            for systematic, params in systematics_params.items():
-#                print(f"{systematic}:")
-#                for param, value in params.items():
-#                    print(f"\t{param} : {value}")
         sim_uvd, systematics, params = apply_systematics(
             sim_uvd, return_systematics=False, verbose=verbose, 
             **systematics_params
