@@ -47,5 +47,5 @@ echo "python -m tools.smooth_abscal_model ${datadir} ${datafile} ${tol} ${gain} 
 python -m tools.smooth_abscal_model ${datadir} ${datafile} ${tol} ${gain} ${skip_wgt} ${edgecut_low} ${edgecut_hi} ${maxiter} ${min_dly} ${horizon} ${standoff} ${window} ${alpha}
 
 # Update permissions.
-chmod ug+r $savedir/*
+chmod ug+r $datadir/*
 date
