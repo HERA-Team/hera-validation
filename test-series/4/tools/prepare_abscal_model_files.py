@@ -23,7 +23,11 @@ lst_max = a.lst_max * units.hr.to('day') * 2 * np.pi
 sim_times = np.unique(sim_uvd.time_array)
 sim_lsts = np.unique(sim_uvd.lst_array)
 keep_times = sim_times[np.logical_and(lst_min < sim_lsts, sim_lsts < lst_max)]
-Ntimes_per_chunk = int(np.ceil(len(keep_times) / a.Nchunks))
+# This ensures that every file (except the last file) has exactly 
+# Nint_per_file integrations.
+Ntimes_per_chunk = int(
+    np.ceil(keep_times.size / (a.Nchunks * a.Nint_per_file))
+)
 
 if a.verbose:
     print("Beginning chunking routine...")
