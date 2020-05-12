@@ -50,6 +50,10 @@ for Nchunk in range(a.Nchunks):
     sim_uvd = sim_prep.downselect_antennas(sim_uvd, ref_uvd)
     sim_uvd.conjugate_bls("ant1<ant2")
     
+    # Add noise if desired
+    if a.add_noise:
+        sim_uvd = sim_prep.add_noise(sim_uvd, Trx=a.Trx, seed='random')
+
     # Now chunk the sim and save it.
     if a.verbose:
         print("Chunking files and writing to disk...")

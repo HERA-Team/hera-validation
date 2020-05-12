@@ -1261,8 +1261,12 @@ def abscal_model_argparser():
     a.add_argument("Nint_per_file", type=int, help="Number of integrations per file.")
     a.add_argument("lst_min", type=float, help="Lower bound of LST range, in hours.")
     a.add_argument("lst_max", type=float, help="Upper bound of LST range, in hours.")
+    a.add_argument("Trx", type=float, default=0, help="Receiver temperature for noise.")
     a.add_argument(
         "--Nchunks", type=int, default=1, help="Number of chunks for performing routine."
+    )
+    a.add_argument(
+        "--add_noise", default=False, action="store_true", help="Whether to add noise."
     )
     a.add_argument("--clobber", default=False, action="store_true", help="Overwrite files.")
     a.add_argument("--verbose", default=False, action="store_true", help="Print progress.")

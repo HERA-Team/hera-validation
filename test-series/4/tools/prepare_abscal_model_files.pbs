@@ -29,6 +29,7 @@ declare savedir=$testdir/data/visibilities/abscal_model
 declare Nint_per_file=60
 declare lst_min=0
 declare lst_max=12
+declare Trx=100 # Make sure this is the same as used in the file prep!
 declare Nchunks=4 # Process in batches of 3 hours each
 
 # Make sure the tools are up to date and switch to the right directory.
@@ -43,8 +44,8 @@ elif [[ " ${remotes[@]} " =~ "test-4.0.0" ]]; then
 fi
 cd test-series/4
 
-echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --Nchunks ${Nchunks} --clobber --verbose"
-python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --Nchunks ${Nchunks} --clobber --verbose
+echo "python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --Trx ${Trx} --Nchunks ${Nchunks} --add_noise --clobber --verbose"
+python -m tools.prepare_abscal_model_files ${simfile} ${obsfile} ${savedir} ${Nint_per_file} ${lst_min} ${lst_max} --Trx ${Trx} --Nchunks ${Nchunks} --add_noise --clobber --verbose
 
 # Update permissions.
 chmod ug+r $savedir/*
