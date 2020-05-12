@@ -73,10 +73,15 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
 
         for bl in sim.get_antpairs():
             blts, _, indx = sim._key2inds(bl + (pol,))
-
-            noise[blts, 0, :, indx[0]] += thermal_noise(
-                lsts=lsts, fqs=freqs_GHz, Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
-            )
+            
+            # Cross-correlations get this treatment
+            if bl[0] != bl[1]:
+                noise[blts, 0, :, indx[0]] += thermal_noise(
+                    lsts=lsts, fqs=freqs_GHz, Tsky_mdl=interp, Trx=Trx, omega_p=omega_p,
+                )
+            else:
+                # ... but the autos need to be *real*
+                noise[blts, 0, :, indx[0]] += Trx / Jy_to_K
 
     if ret_cmp:
         sim.data_array += noise
