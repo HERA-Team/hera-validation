@@ -389,14 +389,14 @@ def vary_gains_in_time(
 
     # Generate an envelope for adding time variation.
     envelope = 1
-    for ref_time, timescale, variation_amp, variation_mode in iterator:
+    for ref_time, timescale, variation_mode, variation_amp in iterator:
         phases = (times - ref_time) / timescale
         if variation_mode == 'linear':
-            envelope *= 1 + 2 * vary_amp * phases
+            envelope *= 1 + 2 * variation_amp * phases
         elif variation_mode == 'sinusoidal':
-            envelope *= 1 + vary_amp * np.sin(2 * np.pi * phases)
+            envelope *= 1 + variation_amp * np.sin(2 * np.pi * phases)
         elif variation_mode == 'noiselike':
-            envelope *= stats.norm.rvs(1, vary_amp, times.size)
+            envelope *= stats.norm.rvs(1, variation_amp, times.size)
     if not np.all(envelope == 1):
         warn("Time variation method not supported; returning.")
         return gains
