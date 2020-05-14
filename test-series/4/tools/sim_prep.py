@@ -1029,6 +1029,8 @@ def interpolate_to_reference(sim_uvd, ref_uvd):
             )
 
     # Finally, update all of the data/metadata.
+    sim_uvd.Ntimes = ref_uvd.Ntimes
+    sim_uvd.Nfreqs = ref_uvd.Nfreqs
     sim_uvd.time_array = new_time_array
     sim_uvd.lst_array = new_lst_array
     sim_uvd.ant_1_array = new_ant_1_array
