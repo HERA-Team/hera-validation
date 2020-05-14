@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -N validation_fileprep
+#PBS -N validation_fileprep_foregrounds_only
 #PBS -q hera
 #PBS -l nodes=1:ppn=1
 #PBS -l walltime=48:00:00
@@ -31,7 +31,7 @@ declare lst_max=7
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simdir=$testdir/data/visibilities
 declare cfgfile=$testdir/setup/sim_config.yaml
-declare skycmp=(sum.uvh5)
+declare skycmp=(foregrounds.uvh5)
 
 # Make sure the tools are up to date and switch to the right directory.
 cd ~/hera_software/hera-validation
@@ -47,7 +47,7 @@ cd test-series/4
 
 declare savedirs=()
 # Only loop over a subset of the days. (Just remove the slice to do all days.)
-for obsday in ${obsdays[@]:0:1}; do
+for obsday in ${obsdays[@]:0:10}; do
     obsdir=${obsbase}/${obsday}
     savedir=${simdir}/${obsday}
     savedirs+=($savedir)
