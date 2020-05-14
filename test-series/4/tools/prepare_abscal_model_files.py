@@ -52,7 +52,9 @@ for Nchunk in range(a.Nchunks):
     
     # Add noise if desired
     if a.add_noise:
-        sim_uvd = sim_prep.add_noise(sim_uvd, Trx=a.Trx, seed='random')
+        sim_uvd = sim_prep.add_noise(
+            sim_uvd, Trx=a.Trx, seed='random', ret_cmp=False
+        )
 
     # Now chunk the sim and save it.
     if a.verbose:
