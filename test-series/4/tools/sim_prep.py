@@ -617,7 +617,7 @@ def adjust_sim_to_data(sim_file, data_files, verbose=False):
     # Downselect in time and rephase LSTs to match the reference data.
     if verbose:
         print("Rephasing simulation to reference data...")
-    sim_uvd = rephase_to_reference(sim_uvd, ref_uvd)
+    sim_uvd = interpolate_to_reference(sim_uvd, ref_uvd)
 
     # Inflate the simulation so antenna downselection can actually be done.
     if verbose:
