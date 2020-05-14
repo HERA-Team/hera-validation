@@ -1020,7 +1020,7 @@ def interpolate_to_reference(sim_uvd, ref_uvd):
         # Now update the data.
         # XXX this isn't super careful and will break if the reference 
         # frequencies aren't within the bounds of the simulation frequencies
-        for pol_ind, pol in sim_uvd.polarization_array:
+        for pol_ind, pol in enumerate(sim_uvd.polarization_array):
             vis = sim_uvd.get_data(bl + (pol,))
             re_spline = RectBivariateSpline(sim_lsts, sim_freqs, vis.real)
             im_spline = RectBivariateSpline(sim_lsts, sim_freqs, vis.imag)
@@ -1038,6 +1038,7 @@ def interpolate_to_reference(sim_uvd, ref_uvd):
     sim_uvd.flag_array = np.zeros(new_data.shape, dtype=bool)
     sim_uvd.nsample_array = np.ones(new_data.shape, dtype=float)
     sim_uvd.data_array = new_data
+    sim_uvd.blt_order = None
     return sim_uvd
 
 def chunk_sim_and_save(
