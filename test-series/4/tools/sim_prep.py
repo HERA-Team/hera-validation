@@ -15,7 +15,7 @@ from .data import DATA_PATH
 from pyuvdata import UVData
 from pyuvdata.utils import polstr2num
 from hera_cal.abscal import get_d2m_time_map
-from hera_cal.io import to_HERAData
+from hera_cal.io import HERAData, to_HERAData
 from hera_cal.utils import lst_rephase
 from hera_sim import Simulator
 from hera_sim.noise import thermal_noise
@@ -402,7 +402,7 @@ def vary_gains_in_time(
             envelope *= 1 + variation_amp * np.sin(2 * np.pi * phases)
         elif variation_mode == 'noiselike':
             envelope *= stats.norm.rvs(1, variation_amp, times.size)
-    if not np.all(envelope == 1):
+    if np.all(envelope == 1):
         warn("Time variation method not supported; returning.")
         return gains
     if clip_gains and not np.allclose(envelope, np.clip(envelope, 0, 2)):
@@ -908,6 +908,88 @@ def rephase_to_reference(sim_uvd, ref_uvd):
         setattr(return_uvd, _property, getattr(sim_uvd, _property))
     return return_uvd
 
+def interpolate_to_reference(sim_uvd, ref_uvd):
+    """
+    Interpolate simulation data to reference LSTs.
+    
+    After downselection and rephasing, this function overwrites the 
+    simulation LST and time arrays to match the reference LSTs and times.
+    
+    Parameters
+    ----------
+    sim_uvd : :class:`pyuvdata.UVData`
+        :class:`pyuvdata.UVData` object containing the simulation data.
+    ref_uvd : :class:`pyuvdata.UVData`
+        :class:`pyuvdata.UVData` object containing the reference data. 
+        Only the metadata for this object needs to be read.
+
+    Returns
+    -------
+    new_sim_uvd : :class:`pyuvdata.UVData`
+        :class:`pyuvdata.UVData` object containing the modified 
+        simulation data. The modified data has been rephased to match 
+        the reference LSTs and has had its time and LST arrays adjusted 
+        to contain only the times and LSTs that are present in the 
+        reference data.
+    """
+    # Ensure the simulation is a UVData object.
+    sim_uvd = _sim_to_uvd(sim_uvd)
+
+    # Load in times and LSTs; get a mapping between reference/sim times.
+    # This is to ensure that the times/LSTs are mapped appropriately 
+    # when there is a phase wrap, since np.unique sorts values.
+    ref_time_to_lst_map = {
+        ref_time : ref_lst 
+        for ref_time, ref_lst in zip(ref_uvd.time_array, ref_uvd.lst_array)
+    }
+    sim_time_to_lst_map = {
+        sim_time : sim_lst
+        for sim_time, sim_lst in zip(sim_uvd.time_array, sim_uvd.lst_array)
+    }
+    ref_times = np.array(list(ref_time_to_lst_map.keys()))
+    ref_lsts = np.array(list(ref_time_to_lst_map.values()))
+    ref_freqs = np.unique(ref_uvd.freq_array)
+    sim_times = np.array(list(sim_time_to_lst_map.keys()))
+    sim_lsts = np.array(list(sim_time_to_lst_map.values()))
+    sim_freqs = np.unique(sim_uvd.freq_array)
+
+    # Currently don't know how to deal with phase wraps appropriately, so
+    def iswrapped(lsts):
+        return any(lst < lsts[0] for lst in lsts)
+    if iswrapped(ref_lsts) or iswrapped(sim_lsts):
+        msg = "Interpolation to reference currently not supported for "
+        msg += "wrapped LSTs."
+        raise NotImplementedError(msg)
+
+    # Raise a warning if any of the reference LSTs are outside the bounds 
+    # of the simulation LSTs.
+    if any(lst < sim_lsts[0] or lst > sim_lsts[-1] for lst in ref_lsts):
+        warn("Reference LSTs exceed bounds of simulation. Clipping reference LSTs.")
+        key = np.logical_and(sim_lsts[0] <= ref_lsts, ref_lsts <= sim_lsts[-1])
+        ref_times = ref_times[key]
+        ref_lsts = ref_lsts[key]
+
+    # Actually do the interpolating.
+    for antpairpol, vis in sim_uvd.antpairpol_iter():
+        re_spline = interpolate.RectBivariateSpline(sim_lsts, sim_freqs, vis.real)
+        im_spline = interpolate.RectBivariateSpline(sim_lsts, sim_freqs, vis.imag)
+        interp_vis = re_spline(ref_lsts, ref_freqs) + 1j * im_spline(ref_lsts, ref_freqs)
+        blts, _, pol_inds = sim_uvd._key2inds(antpairpol)
+        sim_uvd[blts,0,:,pol_inds[0]] = interp_vis
+
+    # Update the time and LST arrays.
+    new_sim_lsts = np.zeros_like(sim_uvd.lst_array)
+    new_sim_times = np.zeros_like(sim_uvd.time_array)
+    for times, ref_lst in zip(ref_to_sim_time_map.items(), ref_lsts):
+        ref_time, sim_time = times
+        blt_slice = np.argwhere(sim_uvd.time_array == sim_time).flatten()
+        new_sim_lsts[blt_slice] = ref_lst
+        new_sim_times[blt_slice] = ref_time
+    sim_uvd.time_array = new_sim_times
+    sim_uvd.lst_array = new_sim_lsts
+
+    return sim_uvd
+
 def chunk_sim_and_save(
     sim_uvd, 
     save_dir, 
@@ -1028,6 +1110,11 @@ def _sim_to_uvd(sim):
     """Update simulation object type."""
     if isinstance(sim, hera_sim.Simulator):
         sim = sim.data
+    elif isinstance(sim, HERAData):
+        uvd = UVData()
+        for attr in uvd:
+            setattr(uvd, attr, getattr(sim, attr))
+        return uvd
     elif isinstance(sim, str):
         sim_ = UVData()
         sim_.read(sim)
