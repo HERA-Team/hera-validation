@@ -8,7 +8,8 @@ import time
 
 import numpy as np
 from astropy import units
-from scipy import interpolate, stats
+from scipy import stats
+from scipy.interpolate import RectBivariateSpline
 from warnings import warn
 
 from .data import DATA_PATH
@@ -69,7 +70,7 @@ def add_noise(sim, Trx=100, seed=None, ret_cmp=True):
 
     for pol in ('xx', 'yy'):
         autos = sim.get_data(*antpair, pol) * Jy_to_K[None, :]
-        interp = interpolate.RectBivariateSpline(lsts, freqs_GHz, autos.real)
+        interp = RectBivariateSpline(lsts, freqs_GHz, autos.real)
 
         for bl in sim.get_antpairs():
             blts, _, indx = sim._key2inds(bl + (pol,))
@@ -988,25 +989,55 @@ def interpolate_to_reference(sim_uvd, ref_uvd):
         ref_times = ref_times[key]
         ref_lsts = ref_lsts[key]
 
-    # Actually do the interpolating.
-    for antpairpol, vis in sim_uvd.antpairpol_iter():
-        re_spline = interpolate.RectBivariateSpline(sim_lsts, sim_freqs, vis.real)
-        im_spline = interpolate.RectBivariateSpline(sim_lsts, sim_freqs, vis.imag)
-        interp_vis = re_spline(ref_lsts, ref_freqs) + 1j * im_spline(ref_lsts, ref_freqs)
-        blts, _, pol_inds = sim_uvd._key2inds(antpairpol)
-        sim_uvd[blts,0,:,pol_inds[0]] = interp_vis
+    # Setup data/metadata objects that will need to be rewritten nontrivially.
+    new_Nblts = ref_times.size * sim_uvd.Nbls
+    new_time_array = np.empty(new_Nblts, dtype=float)
+    new_lst_array = np.empty(new_Nblts, dtype=float)
+    new_ant_1_array = np.empty(new_Nblts, dtype=int)
+    new_ant_2_array = np.empty(new_Nblts, dtype=int)
+    new_baseline_array = np.empty(new_Nblts, dtype=int)
+    new_uvw_array = np.empty((new_Nblts, 3), dtype=float)
+    new_data = np.zeros(
+        (new_Nblts, 1, ref_uvd.Nfreqs, sim_uvd.Npols), dtype=np.complex
+    )
 
-    # Update the time and LST arrays.
-    new_sim_lsts = np.zeros_like(sim_uvd.lst_array)
-    new_sim_times = np.zeros_like(sim_uvd.time_array)
-    for times, ref_lst in zip(ref_to_sim_time_map.items(), ref_lsts):
-        ref_time, sim_time = times
-        blt_slice = np.argwhere(sim_uvd.time_array == sim_time).flatten()
-        new_sim_lsts[blt_slice] = ref_lst
-        new_sim_times[blt_slice] = ref_time
-    sim_uvd.time_array = new_sim_times
-    sim_uvd.lst_array = new_sim_lsts
+    # Fill in the new metadata, sorting the same way HERA data is sorted.
+    for i, bl in enumerate(sim_uvd.get_antpairs()):
+        ant1, ant2 = bl
+        this_slice = slice(i, None, sim_uvd.Nbls)
+        old_blt = sim_uvd._key2inds(bl)[0][0] # Just need one for a reference
+        this_uvw = sim_uvd.uvw_array[old_blt]
+        this_baseline = sim_uvd.baseline_array[old_blt]
+        
+        # Actually update the metadata.
+        new_ant_1_array[this_slice] = ant1
+        new_ant_2_array[this_slice] = ant2
+        new_baseline_array[this_slice] = this_baseline
+        new_uvw_array[this_slice] = this_uvw
+        new_time_array[this_slice] = ref_times
+        new_lst_array[this_slice] = ref_lsts
 
+        # Now update the data.
+        # XXX this isn't super careful and will break if the reference 
+        # frequencies aren't within the bounds of the simulation frequencies
+        for pol_ind, pol in sim_uvd.polarization_array:
+            vis = sim_uvd.get_data(bl + (pol,))
+            re_spline = RectBivariateSpline(sim_lsts, sim_freqs, vis.real)
+            im_spline = RectBivariateSpline(sim_lsts, sim_freqs, vis.imag)
+            new_data[this_slice, 0, :, pol_ind] += (
+                re_spline(ref_lsts, ref_freqs) + 1j * im_spline(ref_lsts, ref_freqs)
+            )
+
+    # Finally, update all of the data/metadata.
+    sim_uvd.time_array = new_time_array
+    sim_uvd.lst_array = new_lst_array
+    sim_uvd.ant_1_array = new_ant_1_array
+    sim_uvd.ant_2_array = new_ant_2_array
+    sim_uvd.baseline_array = new_baseline_array
+    sim_uvd.uvw_array = new_uvw_array
+    sim_uvd.flag_array = np.zeros(new_data.shape, dtype=bool)
+    sim_uvd.nsample_array = np.ones(new_data.shape, dtype=float)
+    sim_uvd.data_array = new_data
     return sim_uvd
 
 def chunk_sim_and_save(
