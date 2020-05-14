@@ -861,16 +861,38 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     sim_times = np.array(list(sim_time_to_lst_map.keys()))
     sim_lsts = np.array(list(sim_time_to_lst_map.values()))
     ref_to_sim_time_map = get_d2m_time_map(ref_times, ref_lsts, sim_times, sim_lsts)
-    
+
+    # Clip reference times/lsts in case the reference bounds exceed the simulation's.
+    if any(sim_time is None for sim_time in ref_to_sim_time_map.values()):
+        warn("Some reference LSTs not in simulation; clipping reference times/LSTs.")
+        key = [
+            ref_times.tolist().index(ref_time)
+            for ref_time, sim_time in ref_to_sim_time_map.items()
+            if sim_time is not None
+        ]
+        ref_times = ref_times[key]
+        ref_lsts = ref_lsts[key]
+
     # Figure out how much to rephase for each integration.
     selected_sim_lsts = np.array(
         list(
             sim_lsts[sim_times.tolist().index(sim_time)] 
             for sim_time in ref_to_sim_time_map.values()
+            if sim_time is not None
         )
     )
     dlst = ref_lsts - selected_sim_lsts
     dlst = np.where(np.isclose(dlst, 0, atol=0.1), dlst, dlst - 2 * np.pi)
+
+    # Warn the user if there are any large jumps in rephasing amounts, since 
+    # this will likely result in a time getting skipped.
+    dlst_diff = np.diff(dlst)
+    avg_diff = np.median(dlst_diff)
+    if any(not np.isclose(diff, avg_diff, rtol=0.1) for diff in dlst_diff):
+        msg = "There is a large jump in the rephasing amount for "
+        msg += "at least one time. There may be a discontinuity in "
+        msg += "the rephased visibilities."
+        warn(msg)
 
     # Downselect in time and load data.
     sim_uvd.select(times=list(ref_to_sim_time_map.values()))
@@ -903,10 +925,7 @@ def rephase_to_reference(sim_uvd, ref_uvd):
     sim_uvd.lst_array = new_sim_lsts
 
     # Ensure that we return a UVData object so that chunk_sim_and_save doesn't break.
-    return_uvd = UVData()
-    for _property in return_uvd:
-        setattr(return_uvd, _property, getattr(sim_uvd, _property))
-    return return_uvd
+    return _sim_to_uvd(sim_uvd)
 
 def interpolate_to_reference(sim_uvd, ref_uvd):
     """
