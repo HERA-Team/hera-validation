@@ -1029,7 +1029,7 @@ def interpolate_to_reference(sim_uvd, ref_uvd):
             )
 
     # Finally, update all of the data/metadata.
-    sim_uvd.Ntimes = ref_uvd.Ntimes
+    sim_uvd.Ntimes = ref_times.size # In case ref_times had to be truncated.
     sim_uvd.Nfreqs = ref_uvd.Nfreqs
     sim_uvd.time_array = new_time_array
     sim_uvd.lst_array = new_lst_array
@@ -1401,7 +1401,7 @@ def abscal_model_argparser():
     a.add_argument("Nint_per_file", type=int, help="Number of integrations per file.")
     a.add_argument("lst_min", type=float, help="Lower bound of LST range, in hours.")
     a.add_argument("lst_max", type=float, help="Upper bound of LST range, in hours.")
-    a.add_argument("Trx", type=float, default=0, help="Receiver temperature for noise.")
+    a.add_argument("--Trx", type=float, default=0, help="Receiver temperature for noise.")
     a.add_argument(
         "--Nchunks", type=int, default=1, help="Number of chunks for performing routine."
     )
