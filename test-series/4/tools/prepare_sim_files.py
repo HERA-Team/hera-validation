@@ -41,6 +41,8 @@ if a.lst_min != 0 or a.lst_max != 24:
 if a.config is not None:
     with open(a.config, 'r') as cfg:
         systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
+else:
+    systematics_params = {}
 
 # Load in some things necessary for doing fileprep in chunks (which is 
 # necessary for large files)
@@ -68,9 +70,10 @@ for N in range(a.Nchunks):
         save_truth=not a.skip_truth, clobber=a.clobber, verbose=a.verbose
     )
     jd = jd_pattern.findall(obsfile_chunk[0])[0]
-    new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
-    with open(new_config, 'r') as cfg:
-        systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
-    # Ensure that the noise realization is unique.
-    if 'noise' in systematics_params.keys():
-        systematics_params['noise']['seed'] = 'random'
+    if a.config is not None:
+        new_config = os.path.join(a.savedir, f'{jd}.config.{sky_cmp}.yaml')
+        with open(new_config, 'r') as cfg:
+            systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
+        # Ensure that the noise realization is unique.
+        if 'noise' in systematics_params.keys():
+            systematics_params['noise']['seed'] = 'random'
