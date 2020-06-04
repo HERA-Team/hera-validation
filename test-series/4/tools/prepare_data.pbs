@@ -26,13 +26,13 @@ for obsday in ${obsdirs[@]}; do
 done
 
 # Finish setup.
-declare lst_min=3
-declare lst_max=4
+declare lst_min=1
+declare lst_max=7
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simdir=$testdir/data/visibilities
 declare cfgfile=$testdir/setup/sim_config.yaml
-declare skycmp=(sum.uvh5)
-declare base_savedir=$simdir/ideal_antpos
+declare skycmp=( foregrounds.uvh5 sum.uvh5 )
+declare base_savedir=$simdir
 
 # Make sure the tools are up to date and switch to the right directory.
 cd ~/hera_software/hera-validation
@@ -58,8 +58,8 @@ for obsday in ${obsdays[@]}; do
     fi
     for simfile in ${skycmp[@]}; do
         simfile=${simdir}/${simfile}
-        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --Nchunks 1 --clobber --verbose"
-        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --Nchunks 1 --clobber --verbose
+        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --config ${cfgfile} --Nchunks 2 --clobber --verbose"
+        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --config ${cfgfile} --Nchunks 2 --clobber --verbose
     done
 done
 
