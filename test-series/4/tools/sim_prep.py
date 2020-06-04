@@ -1022,8 +1022,8 @@ def interpolate_to_reference(sim_uvd, ref_uvd):
         # frequencies aren't within the bounds of the simulation frequencies
         for pol_ind, pol in enumerate(sim_uvd.polarization_array):
             vis = sim_uvd.get_data(bl + (pol,))
-            re_spline = RectBivariateSpline(sim_lsts, sim_freqs, vis.real)
-            im_spline = RectBivariateSpline(sim_lsts, sim_freqs, vis.imag)
+            re_spline = interp1d(sim_lsts, vis.real, axis=0, kind='cubic')
+            im_spline = interp1d(sim_lsts, vis.imag, axis=0, kind='cubic')
             new_data[this_slice, 0, :, pol_ind] += (
                 re_spline(ref_lsts, ref_freqs) + 1j * im_spline(ref_lsts, ref_freqs)
             )
