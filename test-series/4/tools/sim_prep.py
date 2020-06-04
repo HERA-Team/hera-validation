@@ -9,7 +9,7 @@ import time
 import numpy as np
 from astropy import units
 from scipy import stats
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, interp1d
 from warnings import warn
 
 from .data import DATA_PATH
