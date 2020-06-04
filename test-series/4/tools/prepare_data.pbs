@@ -27,11 +27,12 @@ done
 
 # Finish setup.
 declare lst_min=3
-declare lst_max=3.5
+declare lst_max=4
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simdir=$testdir/data/visibilities
 declare cfgfile=$testdir/setup/sim_config.yaml
-declare skycmp=(eor.uvh5)
+declare skycmp=(sum.uvh5)
+declare base_savedir=$simdir/ideal_antpos
 
 # Make sure the tools are up to date and switch to the right directory.
 cd ~/hera_software/hera-validation
@@ -49,7 +50,7 @@ declare savedirs=()
 # Only loop over a subset of the days. (Just remove the slice to do all days.)
 for obsday in ${obsdays[@]}; do
     obsdir=${obsbase}/${obsday}
-    savedir=${simdir}/${obsday}
+    savedir=${base_savedir}/${obsday}
     savedirs+=($savedir)
     # Create the save directory if it doesn't exist.
     if [[ ! -e $savedir ]]; then

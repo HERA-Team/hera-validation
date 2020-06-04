@@ -782,7 +782,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     attrs_to_update = (
         "antenna_numbers",
         "antenna_names",
-        "antenna_positions",
+#        "antenna_positions",
         "telescope_location",
         "telescope_location_lat_lon_alt",
         "telescope_location_lat_lon_alt_degrees",
