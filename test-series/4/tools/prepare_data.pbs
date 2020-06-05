@@ -5,7 +5,7 @@
 #PBS -l walltime=48:00:00
 #PBS -l vmem=256g
 #PBS -j oe
-#PBS -o /lustre/aoc/projects/hera/Validation/test-4.0.0/logs/eor_file_prep.out
+#PBS -o /lustre/aoc/projects/hera/Validation/test-4.0.0/logs/file_prep.out
 #PBS -m be
 #PBS -M r.pascua+nrao@berkeley.edu
 
