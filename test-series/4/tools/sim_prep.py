@@ -761,14 +761,20 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     symmetry, as we have for the RIMEz simulation.
     """
     sim_uvd = _sim_to_uvd(sim_uvd)
-    
+    ref_uvd_meta = ref_uvd.copy(metadata_only=True)
+
     # Find the optimal intersection, get the map between antennas, and downselect the data.
-    sim_ENU_antpos = _get_antpos(sim_uvd)
-    ref_ENU_antpos = _get_antpos(ref_uvd)
-    array_intersection = _get_array_intersection(sim_ENU_antpos, ref_ENU_antpos, tol)
-    sim_to_ref_ant_map = _get_antenna_map(array_intersection, ref_ENU_antpos, tol)
+    sim_antpos = _get_antpos(sim_uvd, ENU=False)
+    ref_antpos = _get_antpos(ref_uvd_meta, ENU=False)
+    array_intersection = _get_array_intersection(sim_antpos, ref_antpos, tol)
+    sim_to_ref_ant_map = _get_antenna_map(array_intersection, ref_antpos, tol)
+    ref_to_sim_ant_map = {
+        ref_ant : sim_ant for sim_ant, ref_ant in sim_to_ref_ant_map.items()
+    }
     sim_uvd.select(antenna_nums=list(sim_to_ref_ant_map.keys()), keep_all_metadata=False)
-    ref_uvd.select(antenna_nums=list(sim_to_ref_ant_map.values()), keep_all_metadata=False)
+    ref_uvd_meta.select(
+        antenna_nums=list(sim_to_ref_ant_map.values()), keep_all_metadata=False
+    )
     
     # Update some of the antenna metadata in a copy of the simulation.
     # This is to ensure that slicing is performed correctly.
@@ -782,13 +788,20 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
     attrs_to_update = (
         "antenna_numbers",
         "antenna_names",
-#        "antenna_positions",
         "telescope_location",
         "telescope_location_lat_lon_alt",
         "telescope_location_lat_lon_alt_degrees",
     )
     for attr in attrs_to_update:
-        setattr(sim_uvd_copy, attr, getattr(ref_uvd, attr))
+        setattr(sim_uvd_copy, attr, getattr(ref_uvd_meta, attr))
+
+    # Update the antenna positions array to use shifted simulation positions.
+    # array_intersection has simulation antenna numbers as keys and shifted 
+    # simulation positions as values.
+    sim_uvd_copy.antenna_positions = np.array([
+        array_intersection[ref_to_sim_ant_map[ref_ant]]
+        for ref_ant in ref_uvd_meta.antenna_numbers
+    ])
     sim_uvd_copy.history += "\nAntennas adjusted to optimally match H1C antennas."
 
     # Prepare the new data array.
@@ -807,6 +820,7 @@ def downselect_antennas(sim_uvd, ref_uvd, tol=1.0):
             this_slice = (conj_blts, 0, slice(None), pol_inds[1])
             vis = vis.conj()
             ref_bl = ref_bl[::-1]
+
         # Update the data-like parameters.
         sim_uvd_copy.data_array[this_slice] = vis
         sim_uvd_copy.flag_array[this_slice] = sim_uvd.get_flags(antpairpol)
