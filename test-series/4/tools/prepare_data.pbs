@@ -5,7 +5,7 @@
 #PBS -l walltime=48:00:00
 #PBS -l vmem=256g
 #PBS -j oe
-#PBS -o /lustre/aoc/projects/hera/Validation/test-4.0.0/logs/file_prep.out
+#PBS -o /lustre/aoc/projects/hera/Validation/test-4.0.0/logs/eor_file_prep.out
 #PBS -m be
 #PBS -M r.pascua+nrao@berkeley.edu
 
@@ -31,7 +31,7 @@ declare lst_max=7
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simdir=$testdir/data/visibilities
 declare cfgfile=$testdir/setup/sim_config.yaml
-declare skycmp=( foregrounds.uvh5 sum.uvh5 )
+declare skycmp=( eor.uvh5 )
 declare base_savedir=$simdir
 
 # Make sure the tools are up to date and switch to the right directory.
@@ -48,7 +48,7 @@ cd test-series/4
 
 declare savedirs=()
 # Only loop over a subset of the days. (Just remove the slice to do all days.)
-for obsday in ${obsdays[@]}; do
+for obsday in ${obsdays[@]:0:1}; do
     obsdir=${obsbase}/${obsday}
     savedir=${base_savedir}/${obsday}
     savedirs+=($savedir)
@@ -58,8 +58,8 @@ for obsday in ${obsdays[@]}; do
     fi
     for simfile in ${skycmp[@]}; do
         simfile=${simdir}/${simfile}
-        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --config ${cfgfile} --Nchunks 2 --clobber --verbose"
-        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --config ${cfgfile} --Nchunks 2 --clobber --verbose
+        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --Nchunks 2 --clobber --verbose"
+        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --Nchunks 2 --clobber --verbose
     done
 done
 
