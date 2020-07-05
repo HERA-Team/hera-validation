@@ -5,8 +5,6 @@ import os
 import yaml
 import ast
 import astropy.units as u
-from astropy.time import Time
-from astropy.coordinates import SkyCoord, CIRS
 from pyuvdata import UVData
 from RIMEz import sky_models, beam_models, rime_funcs, utils, management
 
@@ -167,12 +165,7 @@ intensities = np.broadcast_to(intensities, (len(freq_samples_hz),
 
 # ICRS
 ra, dec = sources[:, 0] * u.deg, sources[:, 1] * u.deg
-sources = SkyCoord(ra=ra, dec=dec, frame='icrs')
-
-# CIRS
-obstime = Time(np.mean(time_sample_jds), format='jd')
-sources = sources.transform_to(CIRS(obstime=obstime))
-ra, dec = sources.ra.to(u.rad).value, sources.dec.to(u.rad).value
+ra, dec = ra.to(u.rad), dec.to(u.rad)
 
 # --------------------------------------------------------
 # Simulate the sky and calculate visibilities
