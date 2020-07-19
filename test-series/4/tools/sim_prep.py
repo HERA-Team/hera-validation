@@ -220,6 +220,93 @@ def add_reflections(
     else:
         return sim
 
+
+def add_reflection_spectrum(
+    sim,
+    seed=None,
+    Ncopies=20,
+    amp_range=(-3, -4),
+    amp_scale=0.0001,
+    dly_rng=(200, 1000),
+    dly_spread=30,
+    time_vary_params=None,
+    ret_cmp=True,
+):
+    """
+    Add reflections at a range of delays.
+
+    Parameters
+    ----------
+    sim: :class:`hera_sim.Simulator` or :class:`pyuvdata.UVData`
+        The object containing the simulation data and metadata.
+    seed: int, optional
+        The random seed. Not used if not specified. Use value 'random' 
+        to have a seed automatically generated.
+    Ncopies: int, optional
+        Number of reflections to introduce. Default is 20.
+    amp_range: tuple of float, optional
+        Range of reflection amplitudes, on a base-10 log scale. Default is
+        to have reflection amplitudes range from 10^-3 to 10^-4.
+    amp_scale: float, optional
+        Amount of jitter to apply to amplitudes, as a fraction of the
+        original amplitudes. Default is 0.01% jitter.
+    dly_rng: tuple of float, optional
+        Range of delays, inclusive, at which to insert reflections, in ns.
+        Default is to insert reflections from 200 ns to 1000 ns.
+    dly_spread: float, optional
+        Amount of jitter to apply to delays, in ns. Default is to introduce
+        jitter with a 30 ns standard deviation.
+    time_vary_params: dict, optional
+        Dictionary of parameters to use for introducing time variation to the
+        reflection gains. Default is to not vary the gains in time.
+    ret_cmp: bool, optional
+        Whether to return the simulated reflection gains alongside the modified
+        simulation. Default is to return the gains.
+
+    Returns
+    -------
+    corrupted_sim: :class:`pyuvdata.UVData`
+        Simulation with reflection gains applied. 
+    gains: dict
+        Dictionary mapping antenna numbers to reflection gains as a 
+        function of frequency (and potentially time). Only returned if ``ret_cmp``
+        is set to True.
+    """
+    # Setup
+    sim = _sim_to_uvd(sim)
+    amps = np.logspace(*amp_range, Ncopies)
+    dlys = np.linspace(*dly_rng, Ncopies)
+    seed = _gen_seed(seed)
+
+    if ret_cmp:
+        shape = (sim.Ntimes, sim.Nfreqs) if time_vary_params else sim.Nfreqs
+        gains = {
+            ant: np.ones(shape, dtype=np.complex) for ant in sim.antenna_numbers
+        }
+
+    for amp, dly in zip(amps, dlys):
+        params = dict(
+            sim=sim,
+            seed=seed,
+            dly=dly,
+            dly_spread=dly_spread,
+            amp=amp,
+            amp_scale=amp_scale,
+            time_vary_params=time_vary_params,
+            ret_cmp=ret_cmp,
+        )
+        if ret_cmp:
+            sim, reflections = add_reflections(**params)
+            gains = {ant: gain * reflections[ant] for ant, gain in gains.items()}
+        else:
+            sim = add_reflections(**params)
+
+    if ret_cmp:
+        return sim, gains
+    else:
+        return sim
+
+
 def add_xtalk(
     sim, 
     seed=None, 
@@ -437,6 +524,7 @@ def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
 SYSTEMATICS_SIMULATORS = {
     'noise' : add_noise,
     'gains' : add_gains,
+    'reflection_spectrum': add_reflection_spectrum,
     'reflections' : add_reflections,
     'xtalk' : add_xtalk
 }
