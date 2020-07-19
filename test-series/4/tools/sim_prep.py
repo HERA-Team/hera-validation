@@ -290,6 +290,11 @@ def add_reflection_spectrum(
         function of frequency (and potentially time). Only returned if ``ret_cmp``
         is set to True.
     """
+    # Make sure each reflection gets its own jitter.
+    seed = _gen_seed(seed)
+    if seed is not None:
+        np.random.seed(seed)
+        seed = np.random.uniform(0, 2**32, Ncopies)
     # Just a thin wrapper around add_reflections.
     amps = np.logspace(*amp_range, Ncopies)
     dlys = np.linspace(*dly_rng, Ncopies)
