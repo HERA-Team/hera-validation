@@ -201,18 +201,35 @@ def add_reflections(
     ants = sim.antenna_numbers
     Nants = len(ants)
     seed = _gen_seed(seed)
+    gains = {ant: np.ones(freqs_GHz.size, dtype=np.complex) for ant in ants}
 
-    # Randomize parameters in a realistic way.
-    if seed is not None:
-        np.random.seed(seed)
-    delays_ns = stats.norm.rvs(dly, dly_spread, Nants)
-    phases = stats.uniform.rvs(0, 2*np.pi, Nants)
-    amps = amp * stats.norm.rvs(1, amp_scale, Nants)
+    # Support multi-reflections.
+    amps = _listify(amp)
+    dlys = _listify(dly)
+    seeds = [seed,] * len(amps) if len(_listify(seed)) == 1 else _listify(seed)
+    if any(
+        len(pair[0]) != len(pair[1])
+        for pair in itertools.combinations((amps, dlys, seeds), 2)
+    ):
+        raise ValueError(
+            "Must specify amplitude and delay for each reflection when "
+            "simulating multiple reflections."
+        )
 
-    # Simulate and apply the gains.
-    gains = hera_sim.sigchain.gen_reflection_gains(
-        freqs_GHz, ants, amp=amps, dly=delays_ns, phs=phases
-    )
+    for amp, dly, seed in zip(amps, dlys, seeds):
+        # Randomize parameters in a realistic way.
+        if seed is not None:
+            np.random.seed(seed)
+        delays_ns = stats.norm.rvs(dly, dly_spread, Nants)
+        phases = stats.uniform.rvs(0, 2*np.pi, Nants)
+        amplitudes = amp * stats.norm.rvs(1, amp_scale, Nants)
+
+        # Simulate and apply the gains.
+        reflections = hera_sim.sigchain.gen_reflection_gains(
+            freqs_GHz, ants, amp=amplitudes, dly=delays_ns, phs=phases
+        )
+        gains = {ant: gain * reflections[ant] for ant, gain in gains.items()}
+
     apply_gains(sim, gains, time_vary_params)
 
     if ret_cmp:
@@ -272,39 +289,19 @@ def add_reflection_spectrum(
         function of frequency (and potentially time). Only returned if ``ret_cmp``
         is set to True.
     """
-    # Setup
-    sim = _sim_to_uvd(sim)
+    # Just a thin wrapper around add_reflections.
     amps = np.logspace(*amp_range, Ncopies)
     dlys = np.linspace(*dly_rng, Ncopies)
-    seed = _gen_seed(seed)
-
-    if ret_cmp:
-        shape = (sim.Ntimes, sim.Nfreqs) if time_vary_params else sim.Nfreqs
-        gains = {
-            ant: np.ones(shape, dtype=np.complex) for ant in sim.antenna_numbers
-        }
-
-    for amp, dly in zip(amps, dlys):
-        params = dict(
-            sim=sim,
-            seed=seed,
-            dly=dly,
-            dly_spread=dly_spread,
-            amp=amp,
-            amp_scale=amp_scale,
-            time_vary_params=time_vary_params,
-            ret_cmp=ret_cmp,
-        )
-        if ret_cmp:
-            sim, reflections = add_reflections(**params)
-            gains = {ant: gain * reflections[ant] for ant, gain in gains.items()}
-        else:
-            sim = add_reflections(**params)
-
-    if ret_cmp:
-        return sim, gains
-    else:
-        return sim
+    return add_reflections(
+        sim=sim,
+        seed=seed,
+        amp=amps,
+        amp_scale=amp_scale,
+        dly=dlys,
+        dly_spread=dly_spread,
+        time_vary_params=time_vary_params,
+        ret_cmp=ret_cmp,
+    )
 
 
 def add_xtalk(
@@ -505,11 +502,13 @@ def vary_gains_in_time(
     if mode in ('phs', 'phase'):
         envelope = np.exp(1j*envelope)
 
-    # Actually apply the time variation.
-    if len(gain_shape) == 1:
-        gains = {ant : gain[None,:] * envelope for ant, gain in gains.items()}
-    else:
-        gains = {ant : gain * envelope for ant, gain in gains.items()}
+    # Actually apply the time variation, but do it in place.
+    for ant, gain in gains.items():
+        if len(gain_shape) == 1:
+            new_gain = gain[None, :] * envelope
+        else:
+            new_gain = gain * envelope
+        gains[ant] = new_gain
     return gains
 
 def gen_xtalk(autovis, freqs, xamps, xdlys, xphs):
