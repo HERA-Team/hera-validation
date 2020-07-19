@@ -61,6 +61,12 @@ for obsday in ${obsdays[@]:0:10}; do
         echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --config ${cfgfile} --Nchunks 2 --clobber --verbose"
         python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --config ${cfgfile} --Nchunks 2 --clobber --verbose
     done
+    # Make the eor files for just the first day.
+    if [[ $obsday == ${obsdays[@]:0:1} ]]; then
+        simfile=${simdir}/eor.uvh5
+        echo "python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --Nchunks 2 --clobber --verbose"
+        python -m tools.prepare_sim_files ${simfile} ${obsdir} ${savedir} --lst_min ${lst_min} --lst_max ${lst_max} --uniformly_sampled --Nchunks 2 --clobber --verbose
+    fi
 done
 
 # Update permissions.
