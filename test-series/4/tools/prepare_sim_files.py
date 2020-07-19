@@ -53,15 +53,16 @@ uvd.read(obsfiles[-1], read_data=False)
 end_jd = uvd.time_array.max()
 sky_cmp = sim_prep._parse_filename_for_cmp(a.simfile)
 chunk_len = int(np.ceil(len(obsfiles) / a.Nchunks))
-time_vary_params = systematics_params.get('gains', {}).get('time_vary_params', None)
-if a.Nchunks > 1 and time_vary_params is not None:
-    file_duration = float(end_jd - start_jd)
-    center_jd = 0.5 * float(start_jd + end_jd)
-    for vary_mode, vary_params in time_vary_params.items():
-        if vary_params.get('variation_ref_times', None) is None:
-            vary_params['variation_ref_times'] = center_jd
-        if vary_params.get('variation_timescales', None) is None:
-            vary_params['variation_timescales'] = file_duration
+for param in ("gains", "reflections", "reflection_spectrum"):
+    time_vary_params = systematics_params.get(param, {}).get('time_vary_params', None)
+    if a.Nchunks > 1 and time_vary_params is not None:
+        file_duration = float(end_jd - start_jd)
+        center_jd = 0.5 * float(start_jd + end_jd)
+        for vary_mode, vary_params in time_vary_params.items():
+            if vary_params.get('variation_ref_times', None) is None:
+                vary_params['variation_ref_times'] = center_jd
+            if vary_params.get('variation_timescales', None) is None:
+                vary_params['variation_timescales'] = file_duration
 
 for N in range(a.Nchunks):
     obsfile_chunk = obsfiles[N * chunk_len : (N+1) * chunk_len]
