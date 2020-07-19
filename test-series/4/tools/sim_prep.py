@@ -209,7 +209,7 @@ def add_reflections(
     dlys = _listify(dly)
     seeds = _listify(seed)
     dly_spreads = _listify(dly_spread)
-    amp_scales = _listify(amp_scales)
+    amp_scales = _listify(amp_scale)
     if len(seeds) == 1:
         seeds *= len(amps)
     if len(dly_spreads) == 1:
@@ -218,11 +218,14 @@ def add_reflections(
         amp_scales *= len(amps)
     if any(
         len(pair[0]) != len(pair[1])
-        for pair in itertools.combinations((amps, dlys, seeds), 2)
+        for pair in itertools.combinations(
+            (amps, dlys, seeds, dly_spreads, amp_scales), 2
+        )
     ):
         raise ValueError(
-            "Must specify amplitude and delay for each reflection when "
-            "simulating multiple reflections."
+            "It appears as if you are trying to simulate multiple reflections "
+            "but have provided parameters with different lengths. Please check "
+            "your input to the reflection simulation."
         )
 
     iterator = zip(amps, dlys, seeds, dly_spreads, amp_scales)
