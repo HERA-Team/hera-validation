@@ -534,6 +534,7 @@ def apply_systematics(
     seed=None,
     noise=None, 
     gains=None, 
+    reflection_spectrum=None,
     reflections=None,
     xtalk=None,
     return_systematics=False,
@@ -610,6 +611,7 @@ def apply_systematics(
     parameters = {
         'noise' : noise,
         'gains' : gains,
+        'reflection_spectrum': reflection_spectrum,
         'reflections' : reflections,
         'xtalk' : xtalk
     }
