@@ -207,7 +207,15 @@ def add_reflections(
     # Support multi-reflections.
     amps = _listify(amp)
     dlys = _listify(dly)
-    seeds = [seed,] * len(amps) if len(_listify(seed)) == 1 else _listify(seed)
+    seeds = _listify(seed)
+    dly_spreads = _listify(dly_spread)
+    amp_scales = _listify(amp_scales)
+    if len(seeds) == 1:
+        seeds *= len(amps)
+    if len(dly_spreads) == 1:
+        dly_spreads *= len(amps)
+    if len(amp_scales) == 1:
+        amp_scales *= len(amps)
     if any(
         len(pair[0]) != len(pair[1])
         for pair in itertools.combinations((amps, dlys, seeds), 2)
@@ -217,7 +225,8 @@ def add_reflections(
             "simulating multiple reflections."
         )
 
-    for amp, dly, seed in zip(amps, dlys, seeds):
+    iterator = zip(amps, dlys, seeds, dly_spreads, amp_scales)
+    for amp, dly, seed, dly_spread, amp_scale in iterator:
         # Randomize parameters in a realistic way.
         if seed is not None:
             np.random.seed(seed)
