@@ -31,7 +31,7 @@ declare lst_max=7
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simdir=$testdir/data/visibilities
 declare cfgfile=$testdir/setup/sim_config.yaml
-declare skycmp=( eor.uvh5 )
+declare skycmp=( sum.uvh5 foregrounds.uvh5 )
 declare base_savedir=$simdir
 
 # Make sure the tools are up to date and switch to the right directory.
@@ -48,7 +48,7 @@ cd test-series/4
 
 declare savedirs=()
 # Only loop over a subset of the days. (Just remove the slice to do all days.)
-for obsday in ${obsdays[@]:0:1}; do
+for obsday in ${obsdays[@]:0:10}; do
     obsdir=${obsbase}/${obsday}
     savedir=${base_savedir}/${obsday}
     savedirs+=($savedir)
