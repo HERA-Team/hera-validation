@@ -31,7 +31,7 @@ declare lst_max=7
 declare testdir=/lustre/aoc/projects/hera/Validation/test-4.0.0
 declare simdir=$testdir/data/visibilities
 declare cfgfile=$testdir/setup/sim_config.yaml
-declare skycmp=( sum.uvh5 foregrounds.uvh5 )
+declare skycmp=( sum.uvh5 )
 declare base_savedir=$simdir
 
 # Make sure the tools are up to date and switch to the right directory.
