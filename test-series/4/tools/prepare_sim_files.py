@@ -80,5 +80,5 @@ for N in range(a.Nchunks):
             systematics_params = yaml.load(cfg.read(), Loader=yaml.FullLoader)
         # Ensure that the noise realization is unique.
         if 'noise' in systematics_params.keys():
-            if 'seed' in systematics_params['noise'].keys():
+            if systematics_params['noise'] is not None:
                 systematics_params['noise']['seed'] = 'random'
