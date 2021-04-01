@@ -2,5 +2,6 @@
 *.md~
 __pycache__
 \.ipynb_checkpoints/
+*.pyc
 __pycache__/
 *jupyter.out
