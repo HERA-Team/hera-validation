@@ -81,8 +81,48 @@ A semi-up-to-date version of this table is found at [project_table.md](./project
 
 ## H1C Sims
 
-The data for the H1C sims reported in https://ui.adsabs.harvard.edu/abs/2021arXiv210409547A/abstract are available upon reasonable request.  For collaboration members, they are
-in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`:
+The data for the H1C sims reported in https://ui.adsabs.harvard.edu/abs/2021arXiv210409547A/abstract are available upon reasonable request.  For collaboration members, the paths on the NRAO machines are listed below.
+
+There are two versions on the data, daily visibilities for 10 days (nominally 245 + [8098, 8099, 8101, 8102, 8103, 8106, 8107, 8108, 8110, 8111])  in `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/`.  These were the starting points of the simulations.
+
+Daily data which has been processed by some portion of the analysis pipeline is in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/245????_*/`.  We assume most users are not interested in this step, but it is included below for completeness.
+
+The final LST-binned data suitable for power spectrum analysis is in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`.  
+
+All three groups of data have different filename extensions.
+
+For daily data we have `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/`:
+
+The files in each of these directories follow this naming convention: `zen.{jd_major}.{jd_minor}.{sky_component}.{state}.uvh5`.  For example:
+
+`zen.2458098.32685.eor.true.uvh5
+zen.2458098.32685.foregrounds.corrupt.uvh5
+zen.2458098.32685.foregrounds.true.uvh5
+zen.2458098.32685.sum.corrupt.uvh5
+zen.2458098.32685.sum.true.uvh5
+zen.2458098.32685.sum.uncal.ref_uncal.uvh5
+zen.2458098.32685.sum.uncal.uvh5`
+
+As an unpacked example: `foregrounds.true.uvh5` corresponds to foreground-only data that has not had any systematics (including noise) applied. Alternatively, `sum.corrupt.uvh5` has both foreground and EoR emission, and has been "corrupted" by the following systematics: thermal noise, bandpass gains, cable reflections, cross-coupling.
+
+For the processed days in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/245????_*/`:
+
+`2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.abs.calfits
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.autos.uvh5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.first.calfits
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.firstcal_metrics.hdf5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.flagged_abs.calfits
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.flagged_abs_vis.uvh5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.noise_std.uvh5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.omni.calfits
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.omni_vis.uvh5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.smooth_abs.calfits
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.smooth_abs_vis.uvh5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.uvh5
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.calibrated.ms
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.calibrated.uvh5_image`
+
+For the LST-binned data in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`:
 
 `sum`: foregrounds + eor, systematics applied, then calibrated out. many different `*.OCRSL*.uvh5` files that correspond to different operations applied to the data
 
@@ -94,10 +134,15 @@ in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`:
 
 `true_sum`: foregrounds + eor, no systematics applied
 
-All of these files have been LST-binned. There are various stages of post-processing, pre-pspec analysis applied to the data, with that information stored in the section of the file name immediately preceding the .uvh5 extension.
+All of these files have been LST-binned. There are various stages of post-processing, pre-pspec analysis applied to the data, with that information stored in the section of the file name immediately preceding the .uvh5 extension.  In particular, 
 
-in `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/`:
+O: omnical
+C: abscal
+R: RFI
+S: smoothcal
+L: LST binned
+P: in-painted
+X: cross-talk mitigated
+T: time averaged
+K: pseudo-Stokes
 
-These are the daily datasets. The files in each of these directories follow this naming convention: `zen.{jd_major}.{jd_minor}.{sky_component}.{state}.uvh5`
-
-As an unpacked example: `foregrounds.true.uvh5` corresponds to foreground-only data that has not had any systematics (including noise) applied. Alternatively, `sum.corrupt.uvh5` has both foreground and EoR emission, and has been "corrupted" by the following systematics: thermal noise, bandpass gains, cable reflections, cross-coupling
