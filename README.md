@@ -78,3 +78,26 @@ To create a simple tabulated version of the Project Plan, download the repo, sav
 and run `make_project_table.py` at the root directory. 
 Note that you will need python 3.4+ and the `pygithub` code to run this script (`pip install pygithub`).
 A semi-up-to-date version of this table is found at [project_table.md](./project_table.md).
+
+## H1C Sims
+
+The data for the H1C sims reported in https://ui.adsabs.harvard.edu/abs/2021arXiv210409547A/abstract are available upon reasonable request.  For collaboration members, they are
+in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`:
+
+`sum`: foregrounds + eor, systematics applied, then calibrated out. many different `*.OCRSL*.uvh5` files that correspond to different operations applied to the data
+
+`foregrounds`: foregrounds only, systematics appplied, then calibrated out. same notes as above.
+
+`true_eor`: eor only, no systematics applied
+
+`true_foregrounds`: foregrounds only, no systematics applied
+
+`true_sum`: foregrounds + eor, no systematics applied
+
+All of these files have been LST-binned. There are various stages of post-processing, pre-pspec analysis applied to the data, with that information stored in the section of the file name immediately preceding the .uvh5 extension.
+
+in `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/`:
+
+These are the daily datasets. The files in each of these directories follow this naming convention: `zen.{jd_major}.{jd_minor}.{sky_component}.{state}.uvh5`
+
+As an unpacked example: `foregrounds.true.uvh5` corresponds to foreground-only data that has not had any systematics (including noise) applied. Alternatively, `sum.corrupt.uvh5` has both foreground and EoR emission, and has been "corrupted" by the following systematics: thermal noise, bandpass gains, cable reflections, cross-coupling
