@@ -81,33 +81,79 @@ A semi-up-to-date version of this table is found at [project_table.md](./project
 
 ## H1C Sims
 
-The data for the H1C sims reported in https://ui.adsabs.harvard.edu/abs/2021arXiv210409547A/abstract are available upon reasonable request.  For collaboration members, the paths on the NRAO machines are listed below.
+The data for the H1C sims reported in the [H1C IDR2 Validation (Aguirre et al., 2021)](https://ui.adsabs.harvard.edu/abs/2021arXiv210409547A/abstract) are available upon 
+reasonable request.  For collaboration members, the paths on the NRAO machines are listed below.
 
-There are two versions on the data, daily visibilities for 10 days (nominally 245 + [8098, 8099, 8101, 8102, 8103, 8106, 8107, 8108, 8110, 8111])  in `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/`.  These were the starting points of the simulations.
+There are three main versions of the simulated data, for different levels of processing:
 
-Daily data which has been processed by some portion of the analysis pipeline is in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/245????_*/`.  We assume most users are not interested in this step, but it is included below for completeness.
+1. Daily raw visibilities (equivalent to raw HERA observations in terms of format/content)
+2. Daily "processed" visibilities (processed by some portion of the analysis pipeline)
+3. LST-binned data suitable for power spectrum analysis.
 
-The final LST-binned data suitable for power spectrum analysis is in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`.  
+The simulated data has the following properties (see above linked paper for details):
 
-All three groups of data have different filename extensions.
+* EoR is a Gaussian Random Field with power-law power spectrum
+* Foregrounds are GLEAM + eGSM
+* 10 full days were simulated (nominally 245 + [8098, 8099, 8101, 8102, 8103, 8106, 8107, 8108, 8110, 8111])
+* Visibility Simulator was `RIMEz`
+* Primary Beam was Fagnoni+2019 HERA beam model
+* Simulations consist of a strict subset of H1C antennas / baselines
+* Frequency range/resolution is the same as H1C data (i.e. 100-200 MHz in 1024 channels)
+* Systematics applied to the data (where appropriate) are:
+  * Thermal Noise: based on constant receiver noise plus simulated autos
+  * Bandpass Gains: randomly perturbed around H1C bandpass measurements
+  * Cable Reflections
+  * Cross-coupling
 
-For daily data we have `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/`:
+Below, we specify for each of the three data versions where to find the data.
 
-The files in each of these directories follow this naming convention: `zen.{jd_major}.{jd_minor}.{sky_component}.{state}.uvh5`.  For example:
+### Daily Raw Visibilities
 
-`zen.2458098.32685.eor.true.uvh5
+These reside in `/lustre/aoc/projects/hera/Validation/test-4.0.0/data/visibilities/245*/` (one folder per day of mock-observation).
+The files in each of these directories follow this naming convention: `zen.{jd_major}.{jd_minor}.{sky_component}.{state}.uvh5`.  
+The `{sky_component}` indicates which sky models are present in the data, and can be one of
+
+* `eor`: The EoR.
+* `foregrounds`: The Foregrounds (both GLEAM and eGSM)
+* `sum`: Both EoR and Foregrounds
+
+The `{state}` indicates whether the state of the data in terms of systematics, and can be one of
+
+* `true`: No systematics included (including noise)
+* `corrupt`: All systematics included (see above list)
+* `uncal`: only bandpass gains included.
+
+For example, the command `ls zen.2458098.32685.*` yields:
+
+```
+zen.2458098.32685.eor.true.uvh5
 zen.2458098.32685.foregrounds.corrupt.uvh5
 zen.2458098.32685.foregrounds.true.uvh5
 zen.2458098.32685.sum.corrupt.uvh5
 zen.2458098.32685.sum.true.uvh5
 zen.2458098.32685.sum.uncal.ref_uncal.uvh5
-zen.2458098.32685.sum.uncal.uvh5`
+zen.2458098.32685.sum.uncal.uvh5
+```
 
-As an unpacked example: `foregrounds.true.uvh5` corresponds to foreground-only data that has not had any systematics (including noise) applied. Alternatively, `sum.corrupt.uvh5` has both foreground and EoR emission, and has been "corrupted" by the following systematics: thermal noise, bandpass gains, cable reflections, cross-coupling.
+### Daily Processed Visibilities
+We assume most users are not interested in this step, but it is included for completeness.
 
-For the processed days in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/245????_*/`:
+These partially-processed visibilities are in 
+`/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/245{jd}_{kind}/`,
+where `{kind}` represents which data was input to the processing, and can be one of
 
-`2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.abs.calfits
+* `foregrounds`: Just foregrounds (no EoR) with all systematics
+* `sum`: FG+EoR with all systematics
+* `sum_uncal`: FG+EoR with just bandpass gains but not other systematics
+
+Other combinations of mock observations (eg. `eor.corrupt`) were not processed.
+
+Each of these folders contains a number of files. Each file corresponds to a stage/product
+of processing, such as firstcal, abscal, smoothcal etc. For example, the files in 
+`/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/2458098_foregrounds/` are:
+
+```
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.abs.calfits
 2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.autos.uvh5
 2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.first.calfits
 2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.firstcal_metrics.hdf5
@@ -120,29 +166,73 @@ For the processed days in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipel
 2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.smooth_abs_vis.uvh5
 2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.uvh5
 2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.calibrated.ms
-2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.calibrated.uvh5_image`
+2458098_foregrounds/zen.2458098.49089.foregrounds.corrupt.calibrated.uvh5_image
+```
 
-For the LST-binned data in `/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`:
+The fully-processed files end with `.smooth_abs_vis.uvh5`.
 
-`sum`: foregrounds + eor, systematics applied, then calibrated out. many different `*.OCRSL*.uvh5` files that correspond to different operations applied to the data
+### LST-Binned Data
 
-`foregrounds`: foregrounds only, systematics appplied, then calibrated out. same notes as above.
+The final LST-binned data suitable for power spectrum analysis is in 
+`/lustre/aoc/projects/hera/Validation/test-4.0.0/pipeline/LSTBIN/`.  
+Within this directory, the LST-binned data for different combinations
+of input models and processing is kept in different directories, namely:
 
-`true_eor`: eor only, no systematics applied
+* `sum/`: FG+EoR, systematics applied, then calibrated out. 
+* `foregrounds/`: FG-only (no EoR), systematics appplied, then calibrated out.
+* `true_eor/`: EoR-only, no systematics applied
+* `true_foregrounds/`: FG-only, no systematics applied
+* `true_sum/`: FG+EoR, no systematics applied
 
-`true_foregrounds`: foregrounds only, no systematics applied
+In particular, no EoR-only with systematics was produced.
 
-`true_sum`: foregrounds + eor, no systematics applied
+In each directory there are a great number of files. The most important files (i.e the LST-binned
+and pre-processed visibilities) have the filename convention `zen.grp1.of1.LST.{lst}.HH.{processing_tags}.uvh5`.
+Here the `lst` is a floating point number giving the LST in radians. The `{processing_tags}` are 
+a group of single upper-case characters that indicate which processing steps have been applied. They are:
 
-All of these files have been LST-binned. There are various stages of post-processing, pre-pspec analysis applied to the data, with that information stored in the section of the file name immediately preceding the .uvh5 extension.  In particular, 
+* O: omnical
+* C: abscal
+* R: RFI
+* S: smoothcal
+* L: LST binned
+* P: in-painted
+* X: cross-talk mitigated
+* T: time averaged
+* K: pseudo-Stokes
 
-O: omnical
-C: abscal
-R: RFI
-S: smoothcal
-L: LST binned
-P: in-painted
-X: cross-talk mitigated
-T: time averaged
-K: pseudo-Stokes
+For example, doing `ls LSTBIN/foregrounds/zen.grp1.of1.LST.*.HH.O*.uvh5` gives
 
+```
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.28190.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.03362.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.28190.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.03441.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.28268.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.12759.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.28973.HH.OCRSLPXTK.uvh5  LSTBIN/foregrounds/zen.grp1.of1.LST.1.12759.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.28973.HH.OCRSLPXT.uvh5   LSTBIN/foregrounds/zen.grp1.of1.LST.1.12837.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.37586.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.22156.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.37586.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.22156.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.37665.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.22234.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.46983.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.22939.HH.OCRSLPXTK.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.46983.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.22939.HH.OCRSLPXT.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.47061.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.31552.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.56380.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.31552.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.56380.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.31631.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.56458.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.40949.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.60295.HH.OCRSLPXTK.uvh5  LSTBIN/foregrounds/zen.grp1.of1.LST.1.40949.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.60295.HH.OCRSLPXT.uvh5   LSTBIN/foregrounds/zen.grp1.of1.LST.1.41027.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.65776.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.50345.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.65776.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.50345.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.65854.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.50424.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.75173.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.54261.HH.OCRSLPXTK.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.75173.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.54261.HH.OCRSLPXT.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.75251.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.59742.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.84569.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.59742.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.84569.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.59820.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.84648.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.69139.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.91617.HH.OCRSLPXTK.uvh5  LSTBIN/foregrounds/zen.grp1.of1.LST.1.69139.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.91617.HH.OCRSLPXT.uvh5   LSTBIN/foregrounds/zen.grp1.of1.LST.1.69217.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.93966.HH.OCRSLP.uvh5     LSTBIN/foregrounds/zen.grp1.of1.LST.1.78535.HH.OCRSLP.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.93966.HH.OCRSL.uvh5      LSTBIN/foregrounds/zen.grp1.of1.LST.1.78535.HH.OCRSL.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.0.94044.HH.OCRSLPX.uvh5    LSTBIN/foregrounds/zen.grp1.of1.LST.1.78613.HH.OCRSLPX.uvh5
+LSTBIN/foregrounds/zen.grp1.of1.LST.1.03362.HH.OCRSLP.uvh5
+```
