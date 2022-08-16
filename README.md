@@ -240,7 +240,22 @@ LSTBIN/foregrounds/zen.grp1.of1.LST.1.03362.HH.OCRSLP.uvh5
 
 ## Long-Term Data Storage
 
-Many of the datasets for invidual tests at NRAO are stored on long-term storage disks
-instead of the main lustre drive. They are at `/home/herastore02-1/Validation/`.
+
+Data for all tests is not stored in this repo, but principally on the NRAO machine, at
+`/lustre/aoc/projects/hera/Validation/`. 
+Each specific test has its own directory with its associated data (eg. `Validation/test-1.0.0/`). 
+The paths to the data within this directory for each test are explicitly referred to in the 
+corresponding test notebook included in this repo. In general, visibilities required for the
+test will be in the `visibilities/` directory, in `*.uvh5` files, while power spectra will be
+in the `spectra/` directory, in `*.psc` files. However, different tests require different hierarchies
+of data, so always refer to the notebook for details. 
+
+Also, be aware that some of the files within these directories will be symbolic links to data 
+stored for other tests. This eases the burden of storage while maintaining a logical file layout
+for each test.
+
+Given the size of the data, and the infrequency of its usage, we maintain a backup of the larger data
+products on the librarian storage system, and purge the files from `lustre` except at need.
+They are at `/home/herastore02-1/Validation/`.
 Even so, they are symlinked to their standard places on lustre, so they can be
 accessed in the usual manner described above.
