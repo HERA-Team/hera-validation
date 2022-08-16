@@ -240,75 +240,7 @@ LSTBIN/foregrounds/zen.grp1.of1.LST.1.03362.HH.OCRSLP.uvh5
 
 ## Long-Term Data Storage
 
-Data for all tests is not stored in this repo, but principally on the NRAO machine, at
-`/lustre/aoc/projects/hera/Validation/`. 
-Each specific test has its own directory with its associated data (eg. `Validation/test-1.0.0/`). 
-The paths to the data within this directory for each test are explicitly referred to in the 
-corresponding test notebook included in this repo. In general, visibilities required for the
-test will be in the `visibilities/` directory, in `*.uvh5` files, while power spectra will be
-in the `spectra/` directory, in `*.psc` files. However, different tests require different hierarchies
-of data, so always refer to the notebook for details. 
-
-Also, be aware that some of the files within these directories will be symbolic links to data 
-stored for other tests. This eases the burden of storage while maintaining a logical file layout
-for each test.
-
-Given the size of the data, and the infrequency of its usage, we maintain a backup of the larger data
-products on the librarian storage system, and purge the files from `lustre` except at need.
-Read/write from the librarian store requires access to the `heramgr` account (contact @plaplant
-to gain access if required). 
-
-The command to copy files from `lustre` to the data store for a particular `TEST` are as follows:
-
-```bash
-ssh heramgr@herastore01  # requires access, see above
-cd /export/herastore01-9/HeraValidationStore/[TEST]
-rsync -avP --prune-empty-dirs --include "*/" --include "*.uvh5" --include "*.psc" --exclude "*" /lustre/aoc/projects/hera/Validation/[TEST]/ .
-```
-
-(obviously replace `[TEST]` with eg. `test-1.0.0`). If the datafiles do not currently exist on `lustre` and you wish to use them, use the following 
-commands:
-
-```bash
-ssh heramgr@herastore01  # requires access, see above
-cd /lustre/aoc/projects/hera/Validation/[TEST]
-rsync -avP --ignore-existing /export/herastore01-9/HeraValidationStore/[TEST]/ .
-```
-
-**Note:** since the files that are pulled in may be symlinks to other tests, you will 
-need to also manually pull the files in those tests that are pointed to. The following 
-snippet of Python should be able to determine which other tests you need to pull (assuming
-you run it in the directory of a certain test):
-
-
-```python
-from pathlib import Path
-
-here = Path('.').absolute()
-val_dir = here.parent
-
-tests = set()
-non_existent = set()
-
-nfiles = 0
-for fl in here.rglob('*'):
-    if fl.name == 'eor.uvh5':
-        print('doing eor...')
-        print(fl.resolve())
-        print(here)
-
-    if not here in fl.resolve().parents:
-        test = fl.resolve().relative_to(val_dir).parts[0]
-        tests.add(test)
-
-        if not fl.resolve().exists():
-            non_existent.add(test)
-
-    nfiles += 1
-
-print("Total files: ", nfiles)
-print("Tests referred to: ", tests)
-print("Tests required to be pulled: ", non_existent)
-```
-
-This python script exists as `/lustre/aoc/projects/hera/Validation/get_required_pulls.py`.
+Many of the datasets for invidual tests at NRAO are stored on long-term storage disks
+instead of the main lustre drive. They are at `/home/herastore02-1/Validation/`.
+Even so, they are symlinked to their standard places on lustre, so they can be
+accessed in the usual manner described above.
