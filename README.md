@@ -9,6 +9,9 @@ archived to provide a long-standing account of the accuracy
 of the pipeline as it evolves. Directory structures define the
 broad kinds of tests performed.
 
+**To find simulation products from various data releases (H1C, H6C, etc)
+go to our [wiki](https://github.com/HERA-Team/hera-validation/wiki/).**
+
 ## Mission Statement
 
 The validation group seeks to validate the HERA data pipeline
@@ -71,13 +74,7 @@ markdown cells. This makes the writing of git hashes and versions simpler,
 and means for example that the execution time/date can be written directly
 into a markdown cell. 
 
-## Project Plan
-To create a simple tabulated version of the Project Plan, download the repo, save a
-[personal access token](https://github.com/settings/tokens) to a file called `.pesonal-github-token`,
-(ensure there is no trailing "\n" in the file)
-and run `make_project_table.py` at the root directory. 
-Note that you will need python 3.4+ and the `pygithub` code to run this script (`pip install pygithub`).
-A semi-up-to-date version of this table is found at [project_table.md](./project_table.md).
+
 
 
 
